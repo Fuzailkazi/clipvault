@@ -9,19 +9,20 @@ export interface ScrapedData {
 
 export async function scrapeUrl(targetUrl: string): Promise<ScrapedData> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-
     const response = await fetch(targetUrl, {
-      signal: controller.signal,
+      signal: AbortSignal.timeout(6000),
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; ClipVaultBot/1.0; +https://clipvault.app)',
         'Accept': 'text/html,application/xhtml+xml',
       },
     });
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
+      return fallbackData(targetUrl);
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html') && !contentType.includes('application/xhtml+xml')) {
       return fallbackData(targetUrl);
     }
 
@@ -39,15 +40,25 @@ export async function scrapeUrl(targetUrl: string): Promise<ScrapedData> {
       $('meta[name="description"]').attr('content') ||
       '';
 
-    const ogImage =
+    let ogImage =
       $('meta[property="og:image"]').attr('content') ||
       $('meta[name="twitter:image"]').attr('content') ||
       '';
 
+    if (ogImage) {
+      try {
+        ogImage = new URL(ogImage, targetUrl).href;
+      } catch {
+        // Keep raw image URL if resolution fails
+      }
+    }
+
     // Extract clean body text (first ~1500 chars)
     $('script, style, noscript, nav, footer, header').remove();
     const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
-    const contentSnippet = (description + ' ' + bodyText).slice(0, 1500);
+    const contentSnippet =
+      [description, bodyText].filter(Boolean).join(' ').trim().slice(0, 1500) ||
+      `Page at ${targetUrl}`;
 
     return {
       title,
