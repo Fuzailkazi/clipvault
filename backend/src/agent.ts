@@ -24,6 +24,10 @@ export const QueryBookmarksParametersSchema = z.object({
   daysAgo: z.number().optional().describe('Number of days back to filter (e.g. 7 for last week)'),
 });
 
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Single LlmAgent to process scraped content and save as bookmark in MongoDB
  */
@@ -42,6 +46,13 @@ export async function processAndSaveBookmark(params: {
     description: 'Saves a validated bookmark with summary, 3 tags, and category into MongoDB.',
     parameters: SaveBookmarkParametersSchema as any,
     execute: async (args: any) => {
+      if (savedBookmarkDoc) {
+        return {
+          success: true,
+          bookmarkId: savedBookmarkDoc._id.toString(),
+        };
+      }
+
       const normalizedTags = (args.tags || ['#general'])
         .slice(0, 3)
         .map((t: string) => (t.startsWith('#') ? t.toLowerCase() : `#${t.toLowerCase()}`));
@@ -150,13 +161,14 @@ export async function handleChatQuery(params: {
 
       if (args.tag) {
         const cleanTag = args.tag.replace(/^#/, '');
-        filter.tags = { $regex: new RegExp(cleanTag, 'i') };
+        filter.tags = { $regex: new RegExp(escapeRegExp(cleanTag), 'i') };
       }
 
       if (args.searchTerm) {
+        const escaped = escapeRegExp(args.searchTerm);
         filter.$or = [
-          { title: { $regex: new RegExp(args.searchTerm, 'i') } },
-          { summary: { $regex: new RegExp(args.searchTerm, 'i') } },
+          { title: { $regex: new RegExp(escaped, 'i') } },
+          { summary: { $regex: new RegExp(escaped, 'i') } },
         ];
       }
 
@@ -196,7 +208,7 @@ Then, answer the user's question with a friendly, helpful response referencing t
     })) {
       if (event.content?.parts) {
         for (const part of event.content.parts) {
-          if ('text' in part && part.text) {
+          if ('text' in part && part.text && !(part as any).thought) {
             agentReply += part.text;
           }
         }
@@ -209,12 +221,13 @@ Then, answer the user's question with a friendly, helpful response referencing t
     };
   } catch (error) {
     console.error('Chat agent error, using fallback search:', error);
+    const escapedMessage = escapeRegExp(message);
     const fallbackBookmarks = await BookmarkModel.find({
       userId,
       $or: [
-        { title: { $regex: new RegExp(message, 'i') } },
-        { summary: { $regex: new RegExp(message, 'i') } },
-        { tags: { $regex: new RegExp(message, 'i') } },
+        { title: { $regex: new RegExp(escapedMessage, 'i') } },
+        { summary: { $regex: new RegExp(escapedMessage, 'i') } },
+        { tags: { $regex: new RegExp(escapedMessage, 'i') } },
       ],
     }).limit(5);
 
