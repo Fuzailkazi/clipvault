@@ -21,7 +21,7 @@ const BookmarkSchema = new Schema({
   category: { type: String, required: true },
   userNotes: { type: String },
   ogImage: { type: String },
-  userId: { type: mongoose.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Types.ObjectId, ref: 'User', required: true, index: true },
   createdAt: { type: Date, default: Date.now },
 });
 
