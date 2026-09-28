@@ -219,20 +219,30 @@ Then, answer the user's question with a friendly, helpful response referencing t
     };
   } catch (error) {
     console.error('Chat agent error, using fallback search:', error);
-    const escapedMessage = escapeRegExp(message);
+    const keywords = message
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !['what', 'have', 'saved', 'show', 'find', 'with', 'about'].includes(w.toLowerCase()))
+      .map(escapeRegExp);
+
+    const orConditions =
+      keywords.length > 0
+        ? keywords.flatMap((kw) => [
+            { title: { $regex: new RegExp(kw, 'i') } },
+            { summary: { $regex: new RegExp(kw, 'i') } },
+            { tags: { $regex: new RegExp(kw, 'i') } },
+          ])
+        : [{ title: { $regex: new RegExp(escapeRegExp(message), 'i') } }];
+
     const fallbackBookmarks = await BookmarkModel.find({
       userId,
-      $or: [
-        { title: { $regex: new RegExp(escapedMessage, 'i') } },
-        { summary: { $regex: new RegExp(escapedMessage, 'i') } },
-        { tags: { $regex: new RegExp(escapedMessage, 'i') } },
-      ],
+      $or: orConditions,
     }).limit(5);
 
     return {
-      response: fallbackBookmarks.length > 0
-        ? `I found ${fallbackBookmarks.length} bookmarks related to your search.`
-        : "I couldn't find any matching bookmarks for your request.",
+      response:
+        fallbackBookmarks.length > 0
+          ? `I found ${fallbackBookmarks.length} bookmark(s) related to your search.`
+          : "I couldn't find any matching bookmarks for your request.",
       bookmarks: fallbackBookmarks,
     };
   }
