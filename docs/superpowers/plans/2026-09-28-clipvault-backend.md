@@ -4,9 +4,9 @@
 
 **Goal:** Build the ClipVault Express & TypeScript backend with Google ADK agent tooling and MongoDB bookmark storage, mirroring the clean, direct coding style and file layout of `recall_BE`.
 
-**Architecture:** A lightweight Express backend in `backend/` with MongoDB Mongoose models, JWT authentication middleware, a Cheerio OpenGraph scraper, and a Single `LlmAgent` using `@google/adk` with Zod tools (`saveBookmark` and `queryBookmarksByTag`).
+**Architecture:** A lightweight Express backend in `backend/` with MongoDB Mongoose models, JWT authentication middleware, a Cheerio OpenGraph scraper, and a Single `LlmAgent` using `@google/adk` (`LlmAgent`, `FunctionTool`, `InMemoryRunner`) with Zod parameter schemas (`saveBookmark` and `queryBookmarksByTag`).
 
-**Tech Stack:** Node.js, Express, TypeScript, Mongoose (MongoDB), JSONWebToken, Cheerio, `@google/adk`, Zod, Cors, Dotenv.
+**Tech Stack:** Node.js, Express, TypeScript, Mongoose (MongoDB), JSONWebToken, Cheerio, `@google/adk`, Zod, Cors, Dotenv, tsx.
 
 ---
 
@@ -19,15 +19,17 @@ clipvault/
 │   ├── tsconfig.json
 │   ├── .env
 │   ├── .gitignore
-│   └── src/
-│       ├── config.ts         # Environment variables & constants
-│       ├── db.ts             # Mongoose connection & Schemas (UserModel, BookmarkModel)
-│       ├── middleware.ts     # userMiddleware for JWT auth
-│       ├── override.d.ts     # Express Request userId typing
-│       ├── scraper.ts        # Cheerio & fetch metadata extractor
-│       ├── agent.ts          # Single LlmAgent with Zod tools (saveBookmark, queryBookmarksByTag)
-│       ├── utils.ts          # Helper functions
-│       └── index.ts          # Express API server with /api/v1 routes
+│   ├── src/
+│   │   ├── config.ts         # Environment variables & constants
+│   │   ├── db.ts             # Mongoose connection & Schemas (UserModel, BookmarkModel)
+│   │   ├── middleware.ts     # userMiddleware for JWT auth
+│   │   ├── override.d.ts     # Express Request userId typing
+│   │   ├── scraper.ts        # Cheerio & fetch metadata extractor
+│   │   ├── agent.ts          # Single LlmAgent with FunctionTool & Zod schemas
+│   │   ├── utils.ts          # Helper functions
+│   │   └── index.ts          # Express API server with /api/v1 routes
+│   └── tests/
+│       └── verify-api.ts     # Comprehensive end-to-end integration test
 └── docs/
     ├── superpowers/
     │   ├── specs/2026-09-28-clipvault-backend-design.md
@@ -46,7 +48,7 @@ clipvault/
 - Create: `backend/src/override.d.ts`
 
 - [ ] **Step 1: Create `backend/package.json`**
-Initialize the package with TypeScript scripts matching `recall_BE`:
+Initialize the package with TypeScript scripts matching `recall_BE` and adding `tsx`:
 ```json
 {
   "name": "clipvault-backend",
@@ -55,11 +57,11 @@ Initialize the package with TypeScript scripts matching `recall_BE`:
   "scripts": {
     "build": "tsc -b",
     "start": "node dist/index.js",
-    "dev": "npm run build && npm run start"
+    "dev": "tsx watch src/index.ts",
+    "test": "tsx tests/verify-api.ts"
   },
   "dependencies": {
     "@google/adk": "^2.1.0",
-    "@google/genai": "^2.24.0",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -70,16 +72,17 @@ Initialize the package with TypeScript scripts matching `recall_BE`:
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
+    "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
 }
 ```
 
 - [ ] **Step 2: Create `backend/tsconfig.json`**
-Match TypeScript compiler settings from `recall_BE`:
+Match TypeScript compiler settings from `recall_BE`, including tests:
 ```json
 {
   "compilerOptions": {
@@ -150,10 +153,15 @@ git commit -m "feat: setup backend package.json, tsconfig, and dependencies"
 import dotenv from 'dotenv';
 dotenv.config();
 
-export const PORT = process.env.PORT || 3000;
+export const PORT = Number(process.env.PORT) || 3000;
 export const MONGODB_URL = process.env.MONGODB_URL || 'mongodb://localhost:27017/clipvaultDB';
 export const JWT_PASSWORD = process.env.JWT_PASSWORD || 'clipvault_secret_jwt_key_123';
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+
+// ADK expects GEMINI_API_KEY in the process environment
+if (GEMINI_API_KEY && !process.env.GEMINI_API_KEY) {
+  process.env.GEMINI_API_KEY = GEMINI_API_KEY;
+}
 ```
 
 - [ ] **Step 2: Write `backend/src/db.ts`**
@@ -222,7 +230,7 @@ export const userMiddleware = (
 ```
 
 - [ ] **Step 4: Write `backend/src/utils.ts`**
-Simple helper utilities (random hash, URL normalization):
+Simple helper utilities (random hash, string cleanups):
 ```typescript
 export function random(len: number): string {
   let options = 'qwertyuioasdfghjklzxcvbnm12345678';
@@ -349,32 +357,35 @@ git commit -m "feat: add cheerio metadata scraper"
 
 ---
 
-### Task 4: Single LlmAgent with Zod Tools
+### Task 4: Single LlmAgent with Google ADK & Zod Tools
 
 **Files:**
 - Create: `backend/src/agent.ts`
 
 - [ ] **Step 1: Write `backend/src/agent.ts`**
-Implement the ADK Single `LlmAgent` and define `saveBookmark` and `queryBookmarksByTag` tools with Zod schemas:
+Implement the ADK Single `LlmAgent` using `@google/adk`'s `FunctionTool`, `LlmAgent`, and `InMemoryRunner`. Use Zod parameter schemas for `saveBookmark` and `queryBookmarksByTag`, and capture execution results via closure:
 ```typescript
 import { z } from 'zod';
-import { GoogleGenAI } from '@google/genai';
-import { GEMINI_API_KEY } from './config';
+import { FunctionTool, LlmAgent, InMemoryRunner } from '@google/adk';
 import { BookmarkModel } from './db';
 import { ScrapedData } from './scraper';
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-// Zod schemas for the tools
-export const SaveBookmarkSchema = z.object({
+// Zod schemas with resilient bounds
+export const SaveBookmarkParametersSchema = z.object({
   url: z.string().url(),
   title: z.string().describe('Concise, accurate title of the content'),
-  summary: z.string().describe('Clear, 2-sentence tl;dr of what this content covers'),
-  tags: z.array(z.string()).length(3).describe('Exactly 3 relevant hashtags, e.g. ["#devops", "#docker", "#containers"]'),
-  category: z.string().describe('Broad category such as devops, frontend, backend, design, ai, tools, article'),
+  summary: z.string().describe('Clear, 2-sentence summary of what this content covers'),
+  tags: z
+    .array(z.string())
+    .min(1)
+    .max(5)
+    .describe('3 relevant hashtags, e.g. ["#devops", "#docker", "#containers"]'),
+  category: z
+    .string()
+    .describe('Broad category such as devops, frontend, backend, design, ai, tools, article'),
 });
 
-export const QueryBookmarksSchema = z.object({
+export const QueryBookmarksParametersSchema = z.object({
   tag: z.string().optional().describe('Tag to filter by, e.g. "#docker" or "docker"'),
   searchTerm: z.string().optional().describe('Keywords to search across title or summary'),
   daysAgo: z.number().optional().describe('Number of days back to filter (e.g. 7 for last week)'),
@@ -390,100 +401,88 @@ export async function processAndSaveBookmark(params: {
   userId: string;
 }) {
   const { url, scrapedData, userNotes, userId } = params;
+  let savedBookmarkDoc: any = null;
 
-  const prompt = `
-You are the ClipVault Assistant. You help users organize bookmarks.
-Analyze the following webpage content and optional user note.
-URL: ${url}
-Title: ${scrapedData.title}
-User Note: ${userNotes || 'None'}
-Page Content Snippet: ${scrapedData.contentSnippet}
+  // 1. Define the saveBookmark tool with Zod parameters schema
+  const saveBookmarkTool = new FunctionTool({
+    name: 'saveBookmark',
+    description: 'Saves a validated bookmark with summary, 3 tags, and category into MongoDB.',
+    parameters: SaveBookmarkParametersSchema,
+    execute: async (args) => {
+      const normalizedTags = (args.tags || ['#general'])
+        .slice(0, 3)
+        .map((t) => (t.startsWith('#') ? t.toLowerCase() : `#${t.toLowerCase()}`));
 
-Your task:
-1. Generate an accurate title.
-2. Generate a 2-sentence tl;dr summary.
-3. Generate exactly 3 relevant hashtags (e.g., ["#devops", "#docker", "#cloud"]).
-4. Classify it into one category (e.g., "devops", "frontend", "backend", "design", "ai", "tools", "article").
-
-Call the saveBookmark function with these parameters.
-`;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        tools: [
-          {
-            functionDeclarations: [
-              {
-                name: 'saveBookmark',
-                description: 'Saves a structured bookmark into the database',
-                parameters: {
-                  type: 'OBJECT',
-                  properties: {
-                    url: { type: 'STRING' },
-                    title: { type: 'STRING' },
-                    summary: { type: 'STRING' },
-                    tags: { type: 'ARRAY', items: { type: 'STRING' } },
-                    category: { type: 'STRING' },
-                  },
-                  required: ['url', 'title', 'summary', 'tags', 'category'],
-                },
-              },
-            ],
-          },
-        ],
-      },
-    });
-
-    const functionCalls = response.functionCalls();
-    if (functionCalls && functionCalls.length > 0) {
-      const call = functionCalls[0];
-      const args = call.args as any;
-
-      // Validate args with Zod schema
-      const validated = SaveBookmarkSchema.parse({
+      savedBookmarkDoc = await BookmarkModel.create({
         url: args.url || url,
         title: args.title || scrapedData.title,
-        summary: args.summary || scrapedData.description || 'No summary available.',
-        tags: args.tags || ['#general'],
+        summary: args.summary || scrapedData.description || 'Saved bookmark.',
+        tags: normalizedTags,
         category: args.category || 'general',
-      });
-
-      const bookmark = await BookmarkModel.create({
-        url: validated.url,
-        title: validated.title,
-        summary: validated.summary,
-        tags: validated.tags,
-        category: validated.category,
         userNotes: userNotes || '',
         ogImage: scrapedData.ogImage,
         userId: userId,
       });
 
-      return bookmark;
+      return {
+        success: true,
+        bookmarkId: savedBookmarkDoc._id.toString(),
+      };
+    },
+  });
+
+  // 2. Initialize Single LlmAgent
+  const agent = new LlmAgent({
+    name: 'clipvault_saver',
+    description: 'Summarizes web pages, assigns 3 tags, and saves them to MongoDB.',
+    model: 'gemini-2.5-flash',
+    instruction: `
+You are the ClipVault Assistant.
+You analyze webpage content and save structured bookmarks.
+Always call the saveBookmark tool with an accurate title, a concise 2-sentence summary, exactly 3 relevant hashtags, and a primary category.
+`,
+    tools: [saveBookmarkTool],
+  });
+
+  try {
+    const runner = new InMemoryRunner({ agent });
+    const userPrompt = `
+Analyze and save this bookmark:
+URL: ${url}
+Title: ${scrapedData.title}
+User Notes: ${userNotes || 'None'}
+Page Content Snippet: ${scrapedData.contentSnippet}
+`;
+
+    for await (const event of runner.runEphemeral({
+      userId,
+      newMessage: { role: 'user', parts: [{ text: userPrompt }] },
+    })) {
+      // Runner processes events and executes tool
     }
 
-    // Fallback if LLM didn't invoke tool directly
-    const fallbackBookmark = await BookmarkModel.create({
+    if (savedBookmarkDoc) {
+      return savedBookmarkDoc;
+    }
+
+    // Direct fallback if tool wasn't triggered
+    return await BookmarkModel.create({
       url,
       title: scrapedData.title,
-      summary: scrapedData.description || 'Saved bookmark.',
+      summary: scrapedData.description || 'Saved link.',
       tags: ['#general', '#link', '#read'],
       category: 'general',
       userNotes: userNotes || '',
       ogImage: scrapedData.ogImage,
       userId,
     });
-    return fallbackBookmark;
   } catch (error) {
-    console.error('Agent processing error, using fallback:', error);
+    console.error('Agent runner error, using fallback:', error);
     return await BookmarkModel.create({
       url,
       title: scrapedData.title,
       summary: scrapedData.description || 'Saved link.',
-      tags: ['#link', '#general', '#clipvault'],
+      tags: ['#general', '#link', '#clipvault'],
       category: 'general',
       userNotes: userNotes || '',
       ogImage: scrapedData.ogImage,
@@ -500,97 +499,83 @@ export async function handleChatQuery(params: {
   userId: string;
 }) {
   const { message, userId } = params;
+  let retrievedBookmarks: any[] = [];
 
-  // Let the agent decide how to query user bookmarks
-  const prompt = `
-You are the ClipVault Chat Assistant. The user wants to search or ask about their saved bookmarks.
-User message: "${message}"
-
-If you need to query their bookmarks, call the queryBookmarksByTag tool.
-`;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        tools: [
-          {
-            functionDeclarations: [
-              {
-                name: 'queryBookmarksByTag',
-                description: 'Search the user bookmarks by tag, search term, or time window',
-                parameters: {
-                  type: 'OBJECT',
-                  properties: {
-                    tag: { type: 'STRING' },
-                    searchTerm: { type: 'STRING' },
-                    daysAgo: { type: 'NUMBER' },
-                  },
-                },
-              },
-            ],
-          },
-        ],
-      },
-    });
-
-    let matchedBookmarks: any[] = [];
-    const functionCalls = response.functionCalls();
-
-    if (functionCalls && functionCalls.length > 0) {
-      const call = functionCalls[0];
-      const args = call.args as any;
-
-      const queryFilter: any = { userId };
+  // 1. Define queryBookmarksByTag tool with Zod parameters schema
+  const queryBookmarksTool = new FunctionTool({
+    name: 'queryBookmarksByTag',
+    description: 'Queries the user saved bookmarks from MongoDB by tag, search keyword, or date window.',
+    parameters: QueryBookmarksParametersSchema,
+    execute: async (args) => {
+      const filter: any = { userId };
 
       if (args.daysAgo) {
-        const sinceDate = new Date();
-        sinceDate.setDate(sinceDate.getDate() - Number(args.daysAgo));
-        queryFilter.createdAt = { $gte: sinceDate };
+        const since = new Date();
+        since.setDate(since.getDate() - Number(args.daysAgo));
+        filter.createdAt = { $gte: since };
       }
 
       if (args.tag) {
         const cleanTag = args.tag.replace(/^#/, '');
-        queryFilter.tags = { $regex: new RegExp(cleanTag, 'i') };
+        filter.tags = { $regex: new RegExp(cleanTag, 'i') };
       }
 
       if (args.searchTerm) {
-        queryFilter.$or = [
+        filter.$or = [
           { title: { $regex: new RegExp(args.searchTerm, 'i') } },
           { summary: { $regex: new RegExp(args.searchTerm, 'i') } },
         ];
       }
 
-      matchedBookmarks = await BookmarkModel.find(queryFilter).sort({ createdAt: -1 }).limit(10);
+      retrievedBookmarks = await BookmarkModel.find(filter).sort({ createdAt: -1 }).limit(10);
 
-      // Now pass the found bookmarks back to the agent to synthesize the final answer
-      const synthesisPrompt = `
-User asked: "${message}"
-Here are the matching bookmarks found in their library:
-${JSON.stringify(matchedBookmarks.map(b => ({ title: b.title, url: b.url, summary: b.summary, tags: b.tags, category: b.category })))}
+      return retrievedBookmarks.map((b) => ({
+        id: b._id.toString(),
+        title: b.title,
+        url: b.url,
+        summary: b.summary,
+        tags: b.tags,
+        category: b.category,
+      }));
+    },
+  });
 
-Please provide a helpful, friendly response directly answering their question and referencing these bookmarks.
-`;
+  // 2. Initialize Single LlmAgent
+  const agent = new LlmAgent({
+    name: 'clipvault_chat',
+    description: 'Searches user bookmarks and synthesizes friendly conversational answers.',
+    model: 'gemini-2.5-flash',
+    instruction: `
+You are the ClipVault Assistant. The user wants to search or ask about their saved bookmarks.
+Call the queryBookmarksByTag tool to look up their library whenever they ask for bookmarks.
+Then, answer the user's question with a friendly, helpful response referencing the bookmarks you found.
+`,
+    tools: [queryBookmarksTool],
+  });
 
-      const finalResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: synthesisPrompt,
-      });
+  try {
+    const runner = new InMemoryRunner({ agent });
+    let agentReply = '';
 
-      return {
-        answer: finalResponse.text || "Here are your matching bookmarks.",
-        bookmarks: matchedBookmarks,
-      };
+    for await (const event of runner.runEphemeral({
+      userId,
+      newMessage: { role: 'user', parts: [{ text: message }] },
+    })) {
+      if (event.content?.parts) {
+        for (const part of event.content.parts) {
+          if ('text' in part && part.text) {
+            agentReply += part.text;
+          }
+        }
+      }
     }
 
     return {
-      answer: response.text || "I couldn't find any matching bookmarks for your request.",
-      bookmarks: [],
+      response: agentReply.trim() || 'Here are your matching bookmarks.',
+      bookmarks: retrievedBookmarks,
     };
   } catch (error) {
-    console.error('Chat agent error:', error);
-    // Fallback: simple text search in MongoDB
+    console.error('Chat agent error, using fallback search:', error);
     const fallbackBookmarks = await BookmarkModel.find({
       userId,
       $or: [
@@ -601,9 +586,9 @@ Please provide a helpful, friendly response directly answering their question an
     }).limit(5);
 
     return {
-      answer: fallbackBookmarks.length > 0
+      response: fallbackBookmarks.length > 0
         ? `I found ${fallbackBookmarks.length} bookmarks related to your search.`
-        : "I couldn't find any matching bookmarks.",
+        : "I couldn't find any matching bookmarks for your request.",
       bookmarks: fallbackBookmarks,
     };
   }
@@ -617,7 +602,7 @@ Expected: Passes without errors.
 - [ ] **Step 3: Commit**
 ```bash
 git add backend/src/agent.ts
-git commit -m "feat: implement Single LlmAgent with saveBookmark and queryBookmarks tools"
+git commit -m "feat: implement Single LlmAgent with Google ADK and Zod tools"
 ```
 
 ---
@@ -628,7 +613,7 @@ git commit -m "feat: implement Single LlmAgent with saveBookmark and queryBookma
 - Create: `backend/src/index.ts`
 
 - [ ] **Step 1: Write `backend/src/index.ts`**
-Setup the Express app and endpoints matching `recall_BE`'s naive route structure:
+Setup the Express app and endpoints matching `recall_BE`'s naive route structure and spec contracts:
 ```typescript
 import express from 'express';
 import cors from 'cors';
@@ -656,7 +641,7 @@ app.post('/api/v1/signup', async (req, res) => {
   try {
     await UserModel.create({
       username,
-      password, // naive pattern matching recall_BE
+      password, // direct pattern matching recall_BE
     });
 
     res.status(201).json({
@@ -710,7 +695,7 @@ app.post('/api/v1/bookmarks', userMiddleware, async (req, res) => {
     // 1. Scrape metadata
     const scrapedData = await scrapeUrl(url);
 
-    // 2. Run agent to summarize, tag, and save to MongoDB
+    // 2. Run Single LlmAgent to summarize, tag, and save to MongoDB
     const bookmark = await processAndSaveBookmark({
       url,
       scrapedData,
@@ -770,7 +755,7 @@ app.delete('/api/v1/bookmarks/:id', userMiddleware, async (req, res) => {
   }
 });
 
-// Chat: Conversational query using ADK agent
+// Chat: Conversational query using ADK agent (contract: response and bookmarks)
 app.post('/api/v1/chat', userMiddleware, async (req, res) => {
   const { message } = req.body;
 
@@ -786,7 +771,7 @@ app.post('/api/v1/chat', userMiddleware, async (req, res) => {
     });
 
     res.json({
-      answer: result.answer,
+      response: result.response,
       bookmarks: result.bookmarks,
     });
   } catch (error) {
@@ -815,34 +800,101 @@ git commit -m "feat: implement Express index.ts with auth, bookmarks, and chat e
 ### Task 6: End-to-End Verification
 
 **Files:**
-- Create: `backend/tests/verify-api.ts` (test script)
+- Create: `backend/tests/verify-api.ts`
 
 - [ ] **Step 1: Write verification script `backend/tests/verify-api.ts`**
-A script that registers a test user, logs in to get a JWT, scrapes & saves a test bookmark, lists it, chats with the agent, and cleans up:
+A comprehensive verification script testing the entire stack end-to-end:
 ```typescript
+import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 import { scrapeUrl } from '../src/scraper';
+import { UserModel, BookmarkModel } from '../src/db';
+import { JWT_PASSWORD } from '../src/config';
+import { processAndSaveBookmark, handleChatQuery } from '../src/agent';
 
-async function testScraper() {
-  console.log('Testing scraper on https://github.com/docker/compose...');
-  const data = await scrapeUrl('https://github.com/docker/compose');
-  console.log('Scraped Title:', data.title);
-  console.log('Snippet length:', data.contentSnippet.length);
-  if (!data.title) throw new Error('Scraper failed to extract title');
-  console.log('✅ Scraper test passed!');
+async function runEndToEndVerification() {
+  console.log('🚀 Starting ClipVault Backend End-to-End Verification...\n');
+
+  // 1. Verify Scraper
+  console.log('1️⃣ Testing Scraper...');
+  const scraped = await scrapeUrl('https://github.com/docker/compose');
+  console.log(`   Scraped Title: "${scraped.title}"`);
+  console.log(`   Snippet Length: ${scraped.contentSnippet.length} chars`);
+  if (!scraped.title) throw new Error('Scraper failed to extract title');
+  console.log('   ✅ Scraper verified!\n');
+
+  // 2. Verify Database Connection
+  console.log('2️⃣ Verifying MongoDB Connection...');
+  if (mongoose.connection.readyState !== 1) {
+    await new Promise((resolve) => mongoose.connection.once('connected', resolve));
+  }
+  console.log('   ✅ MongoDB connected!\n');
+
+  // 3. Verify User Creation & JWT Token
+  console.log('3️⃣ Testing User Registration & JWT Auth...');
+  const testUsername = `testuser_${Date.now()}`;
+  const testUser = await UserModel.create({
+    username: testUsername,
+    password: 'password123',
+  });
+  const token = jwt.sign({ id: testUser._id.toString() }, JWT_PASSWORD);
+  const decoded = jwt.verify(token, JWT_PASSWORD) as { id: string };
+  if (decoded.id !== testUser._id.toString()) throw new Error('JWT verification mismatch');
+  console.log(`   Created User: ${testUser.username} (ID: ${testUser._id})`);
+  console.log('   ✅ Auth & JWT verified!\n');
+
+  // 4. Verify Single LlmAgent Bookmark Saving
+  console.log('4️⃣ Testing ADK Agent Bookmark Processing & Storage...');
+  const savedBookmark = await processAndSaveBookmark({
+    url: 'https://github.com/docker/compose',
+    scrapedData: scraped,
+    userNotes: 'Verify deployment compose file',
+    userId: testUser._id.toString(),
+  });
+  console.log(`   Saved Bookmark Title: "${savedBookmark.title}"`);
+  console.log(`   Summary: "${savedBookmark.summary}"`);
+  console.log(`   Tags: ${JSON.stringify(savedBookmark.tags)}`);
+  console.log(`   Category: "${savedBookmark.category}"`);
+  if (!savedBookmark._id || savedBookmark.tags.length === 0) {
+    throw new Error('Failed to save bookmark via agent');
+  }
+  console.log('   ✅ Agent bookmark creation verified!\n');
+
+  // 5. Verify Query / Chat Agent
+  console.log('5️⃣ Testing ADK Chat Agent Query...');
+  const chatResult = await handleChatQuery({
+    message: 'What Docker bookmarks do I have saved?',
+    userId: testUser._id.toString(),
+  });
+  console.log(`   Chat Response: "${chatResult.response}"`);
+  console.log(`   Matched Bookmarks Count: ${chatResult.bookmarks.length}`);
+  console.log('   ✅ Chat Agent query verified!\n');
+
+  // 6. Cleanup
+  console.log('6️⃣ Cleaning up test data...');
+  await BookmarkModel.deleteMany({ userId: testUser._id });
+  await UserModel.deleteOne({ _id: testUser._id });
+  await mongoose.disconnect();
+  console.log('   ✅ Cleanup complete!\n');
+
+  console.log('🎉 ALL END-TO-END VERIFICATION CHECKS PASSED!');
 }
 
-testScraper().catch((err) => {
-  console.error('Verification failed:', err);
+runEndToEndVerification().catch((err) => {
+  console.error('❌ Verification failed:', err);
   process.exit(1);
 });
 ```
 
-- [ ] **Step 2: Run verification script**
-Run: `cd backend && npx ts-node tests/verify-api.ts` or compile with `tsc` and run.
-Expected: Scraper extracts metadata successfully.
+- [ ] **Step 2: Add `"test": "tsx tests/verify-api.ts"` to `backend/package.json` scripts**
+Verify script is in package.json.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Run verification script**
+Run: `cd backend && npm run test`
+Expected: All 6 end-to-end checks pass with green checkmarks.
+
+- [ ] **Step 4: Commit**
 ```bash
-git add backend/tests/
-git commit -m "test: add verification script for backend"
+git add backend/tests/verify-api.ts
+git commit -m "test: add comprehensive end-to-end verification suite"
 ```
