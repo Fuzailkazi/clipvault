@@ -6,14 +6,11 @@ import { JWT_PASSWORD, PORT } from './config';
 import { userMiddleware } from './middleware';
 import { scrapeUrl } from './scraper';
 import { processAndSaveBookmark, handleChatQuery } from './agent';
+import { escapeRegExp } from './utils';
 
 const app = express();
 app.use(express.json());
 app.use(cors());
-
-function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 // Auth: Signup
 app.post('/api/v1/signup', async (req, res) => {
@@ -46,26 +43,36 @@ app.post('/api/v1/signin', async (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
 
-  const existingUser = await UserModel.findOne({
-    username,
-    password,
-  });
+  if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
+    res.status(400).json({ message: 'Username and password required' });
+    return;
+  }
 
-  if (existingUser) {
-    const token = jwt.sign(
-      {
-        id: existingUser._id,
-      },
-      JWT_PASSWORD
-    );
+  try {
+    const existingUser = await UserModel.findOne({
+      username,
+      password,
+    });
 
-    res.json({
-      token,
-    });
-  } else {
-    res.status(403).json({
-      message: 'Incorrect credentials',
-    });
+    if (existingUser) {
+      const token = jwt.sign(
+        {
+          id: existingUser._id,
+        },
+        JWT_PASSWORD
+      );
+
+      res.json({
+        token,
+      });
+    } else {
+      res.status(403).json({
+        message: 'Incorrect credentials',
+      });
+    }
+  } catch (e) {
+    console.error('Signin error:', e);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -109,7 +116,9 @@ app.get('/api/v1/bookmarks', userMiddleware, async (req, res) => {
 
   if (tag) {
     const cleanTag = escapeRegExp(String(tag).replace(/^#/, ''));
-    filter.tags = { $regex: new RegExp(cleanTag, 'i') };
+    if (cleanTag) {
+      filter.tags = { $regex: new RegExp(cleanTag, 'i') };
+    }
   }
 
   if (search) {
@@ -177,6 +186,9 @@ app.post('/api/v1/chat', userMiddleware, async (req, res) => {
   }
 });
 
+export { app };
+
 app.listen(PORT, () => {
   console.log(`ClipVault Backend running on port ${PORT}`);
 });
+

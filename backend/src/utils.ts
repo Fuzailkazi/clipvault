@@ -7,3 +7,7 @@ export function random(len: number): string {
   }
   return ans;
 }
+
+export function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}

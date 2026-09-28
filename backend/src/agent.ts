@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { FunctionTool, LlmAgent, InMemoryRunner } from '@google/adk';
 import { BookmarkModel } from './db';
 import { ScrapedData } from './scraper';
+import { escapeRegExp } from './utils';
 
 // Zod schemas with resilient bounds
 export const SaveBookmarkParametersSchema = z.object({
@@ -24,9 +25,6 @@ export const QueryBookmarksParametersSchema = z.object({
   daysAgo: z.number().optional().describe('Number of days back to filter (e.g. 7 for last week)'),
 });
 
-function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 /**
  * Single LlmAgent to process scraped content and save as bookmark in MongoDB
