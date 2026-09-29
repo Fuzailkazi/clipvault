@@ -19,15 +19,20 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers,
   });
 
-  if (response.status === 403) {
+  if (response.status === 403 && endpoint !== '/signin' && endpoint !== '/signup') {
     // Dispatch unauthorized event to trigger logout and auth modal
     window.dispatchEvent(new CustomEvent('clipvault:unauthorized'));
   }
 
-  const data = await response.json();
+  let data: any = {};
+  try {
+    data = await response.json();
+  } catch {
+    // Handle non-JSON or empty response
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || 'Request failed');
+    throw new Error(data.message || response.statusText || 'Request failed');
   }
 
   return data as T;
