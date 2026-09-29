@@ -11,13 +11,14 @@ export function BackgroundGrid({
   return (
     <div
       className={cn(
-        'relative min-h-screen w-full bg-slate-50 dark:bg-zinc-950 flex flex-col',
+        'relative min-h-screen w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-400',
         className
       )}
     >
-      {/* Radial Masked Ambient Grid Pattern */}
-      <div className="absolute inset-0 bg-grid-pattern [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+      {/* Subtle top ambient sheen */}
+      <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-500/[0.03] to-transparent dark:from-indigo-500/[0.04] pointer-events-none" />
       {children}
     </div>
   );
 }
+

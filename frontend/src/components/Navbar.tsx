@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bookmark, Sun, Moon, LogIn, LogOut, Sparkles, WifiOff } from 'lucide-react';
+import { Sun, Moon, LogIn, LogOut, Sparkles, WifiOff, Search, LayoutGrid, List } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,6 +8,9 @@ interface NavbarProps {
   isBackendOffline: boolean;
   onOpenAuth: () => void;
   onOpenChat: () => void;
+  onOpenCommandPalette?: () => void;
+  viewMode?: 'grid' | 'list';
+  onToggleViewMode?: (mode: 'grid' | 'list') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -15,46 +18,112 @@ export const Navbar: React.FC<NavbarProps> = ({
   isBackendOffline,
   onOpenAuth,
   onOpenChat,
+  onOpenCommandPalette,
+  viewMode = 'grid',
+  onToggleViewMode,
 }) => {
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated, username, logout } = useAuth();
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/70 dark:bg-zinc-950/70 border-b border-slate-200 dark:border-zinc-800 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand & Stats */}
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-            <Bookmark className="h-5 w-5" />
+    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/80 dark:bg-zinc-950/80 border-b border-zinc-200 dark:border-zinc-800/80 transition-colors">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
+        {/* Brand Monogram & Title */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="h-7 w-7 rounded-lg bg-zinc-900 dark:bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-zinc-100 shadow-xs font-mono font-bold text-xs">
+            CV
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-zinc-300 bg-clip-text text-transparent">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">
               ClipVault
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-800/50">
-              {bookmarkCount} saved
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800">
+              {bookmarkCount}
             </span>
           </div>
 
           {/* Backend Offline Indicator */}
           {isBackendOffline && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-200 dark:border-rose-900">
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
               <WifiOff className="h-3 w-3" />
               <span>Offline</span>
             </span>
           )}
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Ask AI Button */}
+        {/* Search Command Palette Trigger (Center) */}
+        {onOpenCommandPalette && (
+          <div className="hidden md:flex flex-1 max-w-sm justify-center">
+            <button
+              type="button"
+              onClick={onOpenCommandPalette}
+              className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="h-3.5 w-3.5 text-zinc-400" />
+                <span>Search bookmarks or tags...</span>
+              </div>
+              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-300/80 dark:border-zinc-700/80">
+                ⌘K
+              </kbd>
+            </button>
+          </div>
+        )}
+
+        {/* Action Controls (Right) */}
+        <div className="flex items-center gap-2">
+          {/* Mobile search trigger */}
+          {onOpenCommandPalette && (
+            <button
+              type="button"
+              onClick={onOpenCommandPalette}
+              aria-label="Open search"
+              className="md:hidden p-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* View Mode Switcher (Grid vs List) */}
+          {onToggleViewMode && (
+            <div className="flex items-center bg-zinc-100 dark:bg-zinc-900 p-0.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => onToggleViewMode('grid')}
+                title="Grid view"
+                aria-label="Grid view"
+                className={`p-1.5 rounded-md transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                    : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleViewMode('list')}
+                title="List view"
+                aria-label="List view"
+                className={`p-1.5 rounded-md transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                    : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                }`}
+              >
+                <List className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Ask AI Pill Button */}
           <button
             type="button"
             onClick={onOpenChat}
-            aria-label="Ask AI"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-400 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 transition-all cursor-pointer"
+            aria-label="Ask AI Assistant"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 transition-opacity cursor-pointer border border-zinc-800 dark:border-zinc-200"
           >
-            <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+            <Sparkles className="h-3.5 w-3.5 text-indigo-400 dark:text-indigo-600" />
             <span className="hidden sm:inline">Ask AI</span>
           </button>
 
@@ -63,15 +132,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={toggleTheme}
             aria-label="Toggle theme"
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
           >
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
           {/* Auth State */}
           {isAuthenticated ? (
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-zinc-800">
-              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+            <div className="flex items-center gap-2 pl-2 border-l border-zinc-200 dark:border-zinc-800">
+              <span className="text-xs font-mono font-medium text-zinc-700 dark:text-zinc-300">
                 {username}
               </span>
               <button
@@ -79,16 +148,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={logout}
                 title="Log out"
                 aria-label="Log out"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                className="p-1 rounded-md text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors cursor-pointer"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-3.5 w-3.5" />
               </button>
             </div>
           ) : (
             <button
               type="button"
               onClick={onOpenAuth}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer"
             >
               <LogIn className="h-3.5 w-3.5" />
               <span>Sign In</span>

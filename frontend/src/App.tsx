@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { BackgroundGrid } from './components/ui/background-grid';
-import { Button } from './components/ui/moving-border';
 import { Navbar } from './components/Navbar';
 import { QuickPaste } from './components/QuickPaste';
 import { TagFilter } from './components/TagFilter';
 import { BookmarkFeed } from './components/BookmarkFeed';
 import { ChatDrawer } from './components/ChatDrawer';
 import { AuthModal } from './components/AuthModal';
+import { CommandPalette } from './components/CommandPalette';
 import { useAuth } from './context/AuthContext';
 import { api } from './api/client';
 import { Bookmark } from './types';
@@ -24,6 +24,35 @@ export function App() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    try {
+      return (localStorage.getItem('clipvault_view_mode') as 'grid' | 'list') || 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
+
+  const handleToggleViewMode = (mode: 'grid' | 'list') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('clipvault_view_mode', mode);
+    } catch {
+      // Ignore
+    }
+  };
+
+  // Global ⌘K shortcut for Command Palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Debounce search query by 250ms
   useEffect(() => {
@@ -127,15 +156,19 @@ export function App() {
         isBackendOffline={isBackendOffline}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenChat={handleOpenChat}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        viewMode={viewMode}
+        onToggleViewMode={handleToggleViewMode}
       />
 
       <main className="flex-1">
-        <div className="text-center pt-8 px-4">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-800 dark:from-white dark:via-indigo-200 dark:to-zinc-300 bg-clip-text text-transparent">
-            Your Intelligent Bookmark Vault
+        {/* Subtle, modern headline */}
+        <div className="text-center pt-8 pb-2 px-4 max-w-xl mx-auto">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            Intelligent Bookmark Vault
           </h1>
-          <p className="mt-2 text-xs sm:text-sm text-slate-500 dark:text-zinc-400 max-w-xl mx-auto">
-            Paste any link. Our Google ADK agent scrapes, summarizes in 2 sentences, and auto-tags your library.
+          <p className="mt-1.5 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
+            Autonomous ingestion, smart 2-sentence summaries, and instant semantic search.
           </p>
         </div>
 
@@ -160,22 +193,30 @@ export function App() {
             setSearchQuery('');
           }}
           hasFilters={!!selectedTag || !!searchQuery}
+          viewMode={viewMode}
         />
       </main>
 
-      {/* Floating "Ask AI" Trigger (Spec 3.2 item 2 & Spec 4.6) */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <Button
+      {/* Floating "Ask AI" Trigger */}
+      <div className="fixed bottom-6 right-6 z-30">
+        <button
           type="button"
           onClick={handleOpenChat}
-          borderRadius="1rem"
           aria-label="Ask AI Assistant"
-          className="px-4 py-2.5 font-semibold text-xs shadow-xl shadow-indigo-500/20 flex items-center gap-2 cursor-pointer"
+          className="px-3.5 py-2 font-medium text-xs rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border border-zinc-800 dark:border-zinc-200 shadow-xl shadow-black/20 flex items-center gap-2 cursor-pointer hover:opacity-90 active:scale-95 transition-all"
         >
-          <Sparkles className="h-4 w-4 text-indigo-500" />
-          <span>Ask AI Assistant</span>
-        </Button>
+          <Sparkles className="h-3.5 w-3.5 text-indigo-400 dark:text-indigo-600" />
+          <span>Ask AI</span>
+        </button>
       </div>
+
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        bookmarks={bookmarks}
+        tags={masterTags}
+        onSelectTag={(tag) => setSelectedTag(tag)}
+      />
 
       <ChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />

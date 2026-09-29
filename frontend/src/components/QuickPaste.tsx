@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Link2, Sparkles, Loader2, StickyNote } from 'lucide-react';
-import { Button } from './ui/moving-border';
+import { Link2, Loader2, StickyNote, Plus } from 'lucide-react';
 
 interface QuickPasteProps {
   onSave: (url: string, notes?: string) => Promise<void>;
@@ -35,64 +34,65 @@ export const QuickPaste: React.FC<QuickPasteProps> = ({ onSave, isLoading }) => 
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto my-6 px-4">
-      <form onSubmit={handleSubmit} className="relative group">
-        <div className="relative bg-white dark:bg-zinc-900/90 border border-slate-200 dark:border-zinc-800 shadow-xl shadow-indigo-500/5 rounded-2xl p-2 transition-all duration-300 focus-within:border-indigo-500 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20">
-          <div className="flex items-center gap-3 px-3 py-1">
-            <Link2 className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+    <div className="w-full max-w-2xl mx-auto my-6 px-4">
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs transition-colors focus-within:border-zinc-400 dark:focus-within:border-zinc-700">
+          <div className="flex items-center gap-2.5 px-2.5 py-1">
+            <Link2 className="h-4 w-4 text-zinc-400 shrink-0" />
             <input
               type="text"
-              placeholder="Paste any URL (article, GitHub repo, tweet, tool)..."
+              placeholder="Paste any link to ingest (article, GitHub repo, tweet, tool)..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               disabled={isLoading}
               required
-              className="w-full bg-transparent text-sm sm:text-base outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500"
+              className="w-full bg-transparent text-xs sm:text-sm outline-none text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
             />
-            
+
             <button
               type="button"
               onClick={() => setShowNotes(!showNotes)}
-              title="Add quick note"
-              className={`p-2 rounded-xl text-xs transition-colors cursor-pointer ${
+              title="Add note"
+              aria-label="Add note"
+              className={`p-1.5 rounded-md text-xs transition-colors cursor-pointer ${
                 showNotes || notes
                   ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 dark:text-indigo-300'
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300'
+                  : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
               }`}
             >
-              <StickyNote className="h-4 w-4" />
+              <StickyNote className="h-3.5 w-3.5" />
             </button>
 
-            <Button
-              as="button"
+            {/* Tactile Save Button */}
+            <button
               type="submit"
               disabled={isLoading || !url.trim()}
-              className="px-4 py-2 text-xs font-semibold cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 border border-zinc-800 dark:border-zinc-200 flex items-center gap-1.5"
             >
               {isLoading ? (
-                <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="hidden sm:inline">AI Ingesting...</span>
-                </div>
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span className="hidden sm:inline">Ingesting...</span>
+                </>
               ) : (
-                <div className="flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                <>
+                  <Plus className="h-3.5 w-3.5" />
                   <span>Save</span>
-                </div>
+                </>
               )}
-            </Button>
+            </button>
           </div>
 
           {/* Expandable note input */}
           {showNotes && (
-            <div className="mt-2 pt-2 border-t border-slate-100 dark:border-zinc-800/80 px-3 pb-1">
+            <div className="mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80 px-2.5 pb-1">
               <input
                 type="text"
-                placeholder="Optional quick note (e.g. check this for our next release)..."
+                placeholder="Optional personal note..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 disabled={isLoading}
-                className="w-full bg-transparent text-xs text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none"
+                className="w-full bg-transparent text-xs text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none"
               />
             </div>
           )}

@@ -98,7 +98,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-xs"
           />
 
           {/* Slide-over Drawer */}
@@ -106,28 +106,28 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
             aria-label="ClipVault AI Assistant"
-            className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 shadow-2xl flex flex-col z-10"
+            className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col z-10 text-zinc-900 dark:text-zinc-100"
           >
             {/* Drawer Header */}
-            <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                  <Sparkles className="h-4 w-4" />
+            <div className="px-4 py-3.5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-950">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-indigo-500">
+                  <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    ClipVault AI Assistant
+                  <h3 className="text-xs font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                    ClipVault Assistant
                   </h3>
-                  <p className="text-[11px] text-slate-400">Powered by Google ADK</p>
+                  <p className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">Semantic RAG Agent</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close chat drawer"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -138,22 +138,22 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex gap-3 text-xs sm:text-sm ${
+                  className={`flex gap-2.5 text-xs sm:text-sm ${
                     msg.sender === 'user' ? 'justify-end' : 'justify-start'
                   }`}
                 >
                   {msg.sender === 'assistant' && (
-                    <div className="h-7 w-7 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <Bot className="h-4 w-4" />
+                    <div className="h-6 w-6 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5">
+                      <Bot className="h-3.5 w-3.5" />
                     </div>
                   )}
 
-                  <div className={`space-y-2 max-w-[85%]`}>
+                  <div className="space-y-2 max-w-[85%]">
                     <div
-                      className={`p-3 rounded-2xl ${
+                      className={`p-3 rounded-xl text-xs sm:text-sm ${
                         msg.sender === 'user'
-                          ? 'bg-indigo-600 text-white rounded-tr-none'
-                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 rounded-tl-none leading-relaxed'
+                          ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                          : 'bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80 text-zinc-800 dark:text-zinc-200 leading-relaxed'
                       }`}
                     >
                       {msg.text}
@@ -162,8 +162,8 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
                     {/* Attached Bookmarks List */}
                     {msg.bookmarks && msg.bookmarks.length > 0 && (
                       <div className="space-y-1.5 pt-1">
-                        <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
-                          Referenced Bookmarks:
+                        <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 tracking-wider">
+                          Referenced items:
                         </span>
                         {msg.bookmarks.map((b) => (
                           <a
@@ -171,15 +171,15 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
                             href={b.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block p-2.5 rounded-xl bg-white dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/60 hover:border-indigo-400 transition-colors group/card"
+                            className="block p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors group/card"
                           >
                             <div className="flex items-start justify-between gap-2">
-                              <span className="font-medium text-slate-900 dark:text-white line-clamp-1">
+                              <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100 line-clamp-1">
                                 {b.title}
                               </span>
-                              <ExternalLink className="h-3.5 w-3.5 text-slate-400 group-hover/card:text-indigo-500 shrink-0" />
+                              <ExternalLink className="h-3 w-3 text-zinc-400 group-hover/card:text-zinc-200 shrink-0" />
                             </div>
-                            <p className="text-[11px] text-slate-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
                               {b.summary}
                             </p>
                           </a>
@@ -189,19 +189,19 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
                   </div>
 
                   {msg.sender === 'user' && (
-                    <div className="h-7 w-7 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center shrink-0 mt-0.5">
-                      <UserIcon className="h-4 w-4" />
+                    <div className="h-6 w-6 rounded-md bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center shrink-0 mt-0.5">
+                      <UserIcon className="h-3.5 w-3.5" />
                     </div>
                   )}
                 </div>
               ))}
 
               {isLoading && (
-                <div className="flex gap-3 text-xs text-slate-500 dark:text-zinc-400 items-center">
-                  <div className="h-7 w-7 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                <div className="flex gap-2.5 text-xs text-zinc-400 items-center">
+                  <div className="h-6 w-6 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-indigo-500 flex items-center justify-center shrink-0">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   </div>
-                  <span>Searching your bookmarks...</span>
+                  <span className="text-xs font-mono">Querying vault knowledge base...</span>
                 </div>
               )}
 
@@ -210,8 +210,8 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
 
             {/* Suggested Prompts */}
             {messages.length === 1 && (
-              <div className="px-4 py-2 border-t border-slate-100 dark:border-zinc-800/60 space-y-1.5">
-                <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
+              <div className="px-4 py-2.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1.5 bg-zinc-50/50 dark:bg-zinc-950">
+                <span className="text-[10px] font-mono uppercase text-zinc-400 tracking-wider">
                   Suggestions:
                 </span>
                 <div className="flex flex-col gap-1">
@@ -220,7 +220,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
                       type="button"
                       key={q}
                       onClick={() => handleSend(q)}
-                      className="text-left text-xs p-2 rounded-lg bg-slate-50 hover:bg-indigo-50 dark:bg-zinc-800/40 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 transition-colors cursor-pointer"
+                      className="text-left text-xs px-2.5 py-1.5 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors cursor-pointer"
                     >
                       {q}
                     </button>
@@ -235,7 +235,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
                 e.preventDefault();
                 handleSend();
               }}
-              className="p-3 border-t border-slate-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900"
+              className="p-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-950"
             >
               <input
                 type="text"
@@ -244,15 +244,15 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={isLoading}
-                className="flex-1 px-3 py-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:ring-1 focus:ring-indigo-500"
+                className="flex-1 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none border border-transparent focus:border-zinc-400 dark:focus:border-zinc-600 transition-colors"
               />
               <button
                 type="submit"
                 aria-label="Send message"
                 disabled={isLoading || !input.trim()}
-                className="p-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors cursor-pointer"
+                className="p-2 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer border border-zinc-800 dark:border-zinc-200"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-3.5 w-3.5" />
               </button>
             </form>
           </motion.aside>
