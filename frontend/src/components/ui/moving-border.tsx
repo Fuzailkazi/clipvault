@@ -24,7 +24,7 @@ export function Button({
   return (
     <Component
       className={cn(
-        'bg-transparent relative text-xl p-[1px] overflow-hidden cursor-pointer inline-flex items-center justify-center',
+        'bg-transparent relative text-xl p-[1px] overflow-hidden cursor-pointer inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed',
         containerClassName
       )}
       style={{ borderRadius }}
