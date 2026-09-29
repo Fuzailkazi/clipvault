@@ -13,21 +13,18 @@ ClipVault solves the "200+ forgotten browser bookmarks" problem. When you save a
 
 ## Architecture
 
-```
 clipvault/
-├── backend/
-│   ├── src/
-│   │   ├── agent.ts          # Single LlmAgent with Google ADK FunctionTools
-│   │   ├── config.ts         # Environment configuration
-│   │   ├── db.ts             # Mongoose schemas (UserModel, BookmarkModel)
-│   │   ├── index.ts          # Express API server (/api/v1)
-│   │   ├── middleware.ts     # JWT authentication middleware
-│   │   ├── scraper.ts        # Cheerio & fetch metadata scraper with fallbacks
-│   │   └── utils.ts          # Utility functions
-│   └── tests/
-│       └── verify-api.ts     # End-to-end integration test suite
-└── docs/
-    └── superpowers/          # Specifications & Implementation plans
+└── backend/
+    ├── src/
+    │   ├── agent.ts          # Single LlmAgent with Google ADK FunctionTools
+    │   ├── config.ts         # Environment configuration
+    │   ├── db.ts             # Mongoose schemas (UserModel, BookmarkModel)
+    │   ├── index.ts          # Express API server (/api/v1)
+    │   ├── middleware.ts     # JWT authentication middleware
+    │   ├── scraper.ts        # Cheerio & fetch metadata scraper with fallbacks
+    │   └── utils.ts          # Utility functions
+    └── tests/
+        └── verify-api.ts     # End-to-end integration test suite
 ```
 
 ---
