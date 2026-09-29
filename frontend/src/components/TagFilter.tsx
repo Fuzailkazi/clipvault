@@ -24,6 +24,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
+            aria-label="Search bookmarks"
             placeholder="Search in title or summary..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -31,7 +32,9 @@ export const TagFilter: React.FC<TagFilterProps> = ({
           />
           {searchQuery && (
             <button
+              type="button"
               onClick={() => onSearchChange('')}
+              aria-label="Clear search"
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
@@ -41,6 +44,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
 
         {selectedTag && (
           <button
+            type="button"
             onClick={() => onSelectTag(null)}
             className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline flex items-center gap-1 cursor-pointer"
           >
@@ -62,6 +66,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
             const isSelected = selectedTag === tag;
             return (
               <button
+                type="button"
                 key={tag}
                 onClick={() => onSelectTag(isSelected ? null : tag)}
                 className={`text-xs px-3 py-1 rounded-full whitespace-nowrap font-medium transition-all duration-200 cursor-pointer ${

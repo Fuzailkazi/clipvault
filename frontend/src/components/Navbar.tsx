@@ -49,7 +49,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Ask AI Button */}
           <button
+            type="button"
             onClick={onOpenChat}
+            aria-label="Ask AI"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-400 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 transition-all cursor-pointer"
           >
             <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
@@ -58,6 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Theme Toggle */}
           <button
+            type="button"
             onClick={toggleTheme}
             aria-label="Toggle theme"
             className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
@@ -72,8 +75,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {username}
               </span>
               <button
+                type="button"
                 onClick={logout}
                 title="Log out"
+                aria-label="Log out"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
               >
                 <LogOut className="h-4 w-4" />
@@ -81,6 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           ) : (
             <button
+              type="button"
               onClick={onOpenAuth}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 transition-all shadow-sm cursor-pointer"
             >

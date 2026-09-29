@@ -16,12 +16,26 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hasImgError, setHasImgError] = useState(false);
 
-  const handleCopy = (e: React.MouseEvent) => {
+  const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(bookmark.url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(bookmark.url);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = bookmark.url;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Ignore copy error
+    }
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -51,16 +65,13 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   return (
     <HoverCard className="h-full">
       {/* Top Banner / Image */}
-      {bookmark.ogImage ? (
+      {bookmark.ogImage && !hasImgError ? (
         <div className="h-40 w-full overflow-hidden bg-slate-100 dark:bg-zinc-800 relative">
           <img
             src={bookmark.ogImage}
             alt={bookmark.title}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={(e) => {
-              // Hide image if broken
-              (e.target as HTMLElement).style.display = 'none';
-            }}
+            onError={() => setHasImgError(true)}
           />
           <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
             {bookmark.category || 'link'}
@@ -131,17 +142,21 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
 
             <div className="flex items-center gap-1">
               <button
+                type="button"
                 onClick={handleCopy}
                 title="Copy URL"
+                aria-label="Copy bookmark URL"
                 className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
               >
                 {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
               </button>
 
               <button
+                type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
                 title="Delete bookmark"
+                aria-label="Delete bookmark"
                 className="p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Trash2 className="h-3.5 w-3.5" />
