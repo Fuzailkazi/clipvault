@@ -34,7 +34,7 @@ export const BookmarkFeed: React.FC<BookmarkFeedProps> = ({
             Backend Disconnected
           </h3>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-            Unable to connect to the ClipVault server. Please make sure the backend is running on port 3000.
+            Unable to connect to the ClipVault server. Please make sure the backend is running on port 3100.
           </p>
         </div>
       </div>
