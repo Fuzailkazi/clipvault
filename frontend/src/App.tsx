@@ -42,33 +42,45 @@ export function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch bookmarks
-  const fetchBookmarks = async () => {
+  // Fetch bookmarks with race-condition guard & clean logout reset
+  useEffect(() => {
+    let isCurrent = true;
+
     if (!isAuthenticated) {
       setBookmarks([]);
+      setMasterTags([]);
+      setSelectedTag(null);
+      setSearchQuery('');
       return;
     }
 
-    try {
-      setIsLoading(true);
-      const res = await api.getBookmarks(selectedTag || undefined, debouncedSearch || undefined);
-      setBookmarks(res.bookmarks || []);
+    const loadBookmarks = async () => {
+      try {
+        setIsLoading(true);
+        const res = await api.getBookmarks(selectedTag || undefined, debouncedSearch || undefined);
+        if (!isCurrent) return;
 
-      // If unfiltered, update master persistent tags
-      if (!selectedTag && !debouncedSearch) {
-        const allTags = res.bookmarks.flatMap((b) => b.tags || []);
-        setMasterTags(Array.from(new Set(allTags)).sort());
+        setBookmarks(res.bookmarks || []);
+
+        // If unfiltered, update master persistent tags
+        if (!selectedTag && !debouncedSearch) {
+          const allTags = (res.bookmarks || []).flatMap((b) => b.tags || []);
+          setMasterTags(Array.from(new Set(allTags)).sort());
+        }
+        setIsBackendOffline(false);
+      } catch (err) {
+        if (!isCurrent) return;
+        console.error('Error fetching bookmarks:', err);
+      } finally {
+        if (isCurrent) setIsLoading(false);
       }
-      setIsBackendOffline(false);
-    } catch (err) {
-      console.error('Error fetching bookmarks:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  useEffect(() => {
-    fetchBookmarks();
+    loadBookmarks();
+
+    return () => {
+      isCurrent = false;
+    };
   }, [isAuthenticated, selectedTag, debouncedSearch]);
 
   const handleSave = async (url: string, notes?: string) => {
@@ -92,8 +104,12 @@ export function App() {
   };
 
   const handleDelete = async (id: string) => {
-    await api.deleteBookmark(id);
-    setBookmarks((prev) => prev.filter((b) => b._id !== id));
+    try {
+      await api.deleteBookmark(id);
+      setBookmarks((prev) => prev.filter((b) => b._id !== id));
+    } catch (err) {
+      console.error('Failed to delete bookmark:', err);
+    }
   };
 
   const handleOpenChat = () => {
