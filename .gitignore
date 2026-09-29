@@ -23,3 +23,5 @@ yarn-error.log*
 
 # Internal docs & planning
 docs/superpowers/
+.superpowers/
+
