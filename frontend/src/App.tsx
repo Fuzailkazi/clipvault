@@ -144,7 +144,13 @@ export function App() {
 
         if (!selectedTag && !debouncedSearch) {
           const allTags = (res.bookmarks || []).flatMap((b) => b.tags || []);
-          setMasterTags(Array.from(new Set(allTags)).sort());
+          const counts: Record<string, number> = {};
+          for (const t of allTags) counts[t] = (counts[t] || 0) + 1;
+          const sorted = Array.from(new Set(allTags)).sort((a, b) => {
+            const diff = (counts[b] || 0) - (counts[a] || 0);
+            return diff !== 0 ? diff : a.localeCompare(b);
+          });
+          setMasterTags(sorted);
         }
         setIsBackendOffline(false);
       } catch (err) {
@@ -172,11 +178,18 @@ export function App() {
     setIsSaving(true);
     try {
       const res = await api.createBookmark(url, notes);
-      setBookmarks((prev) => [res.bookmark, ...prev]);
-
-      if (res.bookmark.tags) {
-        setMasterTags((prev) => Array.from(new Set([...prev, ...res.bookmark.tags])).sort());
-      }
+      setBookmarks((prev) => {
+        const next = [res.bookmark, ...prev];
+        const allTags = next.flatMap((b) => b.tags || []);
+        const counts: Record<string, number> = {};
+        for (const t of allTags) counts[t] = (counts[t] || 0) + 1;
+        const sorted = Array.from(new Set(allTags)).sort((a, b) => {
+          const diff = (counts[b] || 0) - (counts[a] || 0);
+          return diff !== 0 ? diff : a.localeCompare(b);
+        });
+        setMasterTags(sorted);
+        return next;
+      });
     } finally {
       setIsSaving(false);
     }
@@ -322,7 +335,11 @@ export function App() {
         onSelectTag={(tag) => setSelectedTag(tag)}
       />
 
-      <ChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      <ChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        bookmarks={bookmarks}
+      />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
     </BackgroundGrid>
   );

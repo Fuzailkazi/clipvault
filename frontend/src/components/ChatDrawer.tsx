@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Send, Loader2, Bot, User as UserIcon, ExternalLink } from 'lucide-react';
 import { api } from '../api/client';
@@ -14,22 +14,103 @@ interface Message {
 interface ChatDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  bookmarks?: Bookmark[];
 }
 
-const SUGGESTED_QUERIES = [
-  'What Docker bookmarks do I have saved?',
-  'Show me tools I saved for frontend development',
-  'Find bookmarks about AI and LLMs',
-];
+export function generateDynamicRecommendations(bookmarks: Bookmark[] = []): string[] {
+  if (!bookmarks || bookmarks.length === 0) {
+    return [
+      'How do I clip and organize links?',
+      'What categories can I organize with?',
+      'How does AI knowledge search work?',
+    ];
+  }
 
-export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
+  const queries: string[] = [];
+
+  // 1. Tag frequency analysis
+  const tagCounts: Record<string, number> = {};
+  for (const b of bookmarks) {
+    for (const t of b.tags || []) {
+      const clean = t.replace(/^#/, '').trim().toLowerCase();
+      if (clean && clean !== 'link' && clean !== 'clipvault' && clean !== 'read') {
+        tagCounts[clean] = (tagCounts[clean] || 0) + 1;
+      }
+    }
+  }
+
+  const topTags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]);
+
+  if (topTags.length > 0) {
+    queries.push(`What did I save about #${topTags[0]}?`);
+    if (topTags.length > 1) {
+      queries.push(`Show me bookmarks tagged #${topTags[1]}`);
+    }
+  }
+
+  // 2. Category suggestions (if non-general)
+  const categories = Array.from(
+    new Set(
+      bookmarks
+        .map((b) => b.category?.trim().toLowerCase())
+        .filter((c): c is string => !!c && c !== 'general')
+    )
+  );
+
+  if (categories.length > 0 && queries.length < 3) {
+    queries.push(`Summarize my ${categories[0]} links`);
+  }
+
+  // 3. Domain or title from recent clips
+  for (const b of bookmarks) {
+    if (queries.length >= 3) break;
+    try {
+      const domain = new URL(b.url).hostname.replace(/^www\./, '');
+      const domainQuery = `Find clips from ${domain}`;
+      if (domain && !queries.includes(domainQuery)) {
+        queries.push(domainQuery);
+      }
+    } catch {
+      // Ignore URL parse error
+    }
+  }
+
+  // 4. Fallback if still under 3
+  if (queries.length < 3) {
+    queries.push('What are the key insights across my latest clips?');
+  }
+
+  return queries.slice(0, 3);
+}
+
+export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, bookmarks = [] }) => {
+  const dynamicSuggestions = useMemo(() => generateDynamicRecommendations(bookmarks), [bookmarks]);
+
+  const welcomeText = useMemo(() => {
+    if (bookmarks.length === 0) {
+      return "Hello! I'm your ClipVault Assistant. Once you clip some links, you can ask me to search, summarize, or connect insights across your vault.";
+    }
+    const topTag = bookmarks.flatMap((b) => b.tags || [])[0]?.replace(/^#/, '');
+    const topicHint = topTag ? ` (like your clips on #${topTag})` : '';
+    return `Hello! I'm your ClipVault Assistant. Ask me anything about your ${bookmarks.length} saved clip${bookmarks.length > 1 ? 's' : ''}${topicHint}.`;
+  }, [bookmarks]);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
       sender: 'assistant',
-      text: "Hello! I'm your ClipVault Assistant. Ask me anything about your saved bookmarks, like 'What articles did I save last week about Docker?'",
+      text: welcomeText,
     },
   ]);
+
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === 'welcome') {
+        return [{ ...prev[0], text: welcomeText }];
+      }
+      return prev;
+    });
+  }, [welcomeText]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -210,11 +291,18 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
             {/* Suggested Prompts */}
             {messages.length === 1 && (
               <div className="px-4 py-2.5 border-t border-slate-200/80 dark:border-white/10 space-y-1.5 bg-slate-50/50 dark:bg-slate-900/50">
-                <span className="text-[10px] font-medium uppercase text-slate-400 tracking-wider">
-                  Suggestions:
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">
+                    {bookmarks.length > 0 ? 'Suggestions from your clips:' : 'Getting Started:'}
+                  </span>
+                  {bookmarks.length > 0 && (
+                    <span className="text-[10px] text-sky-600 dark:text-sky-400 font-medium">
+                      Based on your vault
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-col gap-1">
-                  {SUGGESTED_QUERIES.map((q) => (
+                  {dynamicSuggestions.map((q) => (
                     <button
                       type="button"
                       key={q}

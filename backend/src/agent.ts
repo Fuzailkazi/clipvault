@@ -26,6 +26,82 @@ export const QueryBookmarksParametersSchema = z.object({
 });
 
 
+export function inferMetadataFromContent(url: string, title: string, description: string) {
+  let domain = '';
+  try {
+    domain = new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    domain = '';
+  }
+
+  const text = `${title} ${description} ${domain}`.toLowerCase();
+  const tags = new Set<string>();
+  let category = 'general';
+
+  // Domain-based tagging
+  if (domain.includes('github')) {
+    tags.add('#github');
+    tags.add('#code');
+    category = 'tools';
+  } else if (domain.includes('youtube') || domain.includes('vimeo')) {
+    tags.add('#video');
+    category = 'article';
+  } else if (domain.includes('twitter') || domain.includes('x.com')) {
+    tags.add('#social');
+    category = 'article';
+  } else if (domain.includes('figma') || domain.includes('dribbble')) {
+    tags.add('#design');
+    tags.add('#ui');
+    category = 'design';
+  } else if (domain.includes('medium') || domain.includes('dev.to') || domain.includes('hashnode')) {
+    tags.add('#article');
+    tags.add('#dev');
+    category = 'article';
+  } else if (domain) {
+    const mainHost = domain.split('.')[0];
+    if (mainHost && mainHost.length > 2 && !['com', 'org', 'net', 'io', 'app', 'co'].includes(mainHost)) {
+      tags.add(`#${mainHost}`);
+    }
+  }
+
+  // Keyword / Topic inference
+  if (/docker|container|kubernetes|k8s|devops|terraform|aws|gcp|azure/i.test(text)) {
+    tags.add('#devops');
+    if (/docker/i.test(text)) tags.add('#docker');
+    category = 'devops';
+  } else if (/react|vue|angular|svelte|frontend|css|tailwind|html|javascript|typescript/i.test(text)) {
+    tags.add('#frontend');
+    if (/react/i.test(text)) tags.add('#react');
+    if (/typescript/i.test(text)) tags.add('#typescript');
+    category = 'frontend';
+  } else if (/node|express|python|rust|golang|backend|api|database|mongodb|postgres|sql/i.test(text)) {
+    tags.add('#backend');
+    if (/python/i.test(text)) tags.add('#python');
+    category = 'backend';
+  } else if (/ai|llm|gemini|openai|gpt|machine learning|deep learning|agent/i.test(text)) {
+    tags.add('#ai');
+    tags.add('#llm');
+    category = 'ai';
+  } else if (/design|ui|ux|typography|color|figma/i.test(text)) {
+    tags.add('#design');
+    category = 'design';
+  }
+
+  // Ensure 1-3 tags
+  const tagList = Array.from(tags).slice(0, 3);
+  if (tagList.length === 0) {
+    tagList.push('#read');
+  }
+
+  const summary = description.trim() || `Bookmark for ${title || domain || url}`;
+
+  return {
+    tags: tagList,
+    category,
+    summary,
+  };
+}
+
 /**
  * Single LlmAgent to process scraped content and save as bookmark in MongoDB
  */
@@ -81,7 +157,7 @@ export async function processAndSaveBookmark(params: {
     instruction: `
 You are the ClipVault Assistant.
 You analyze webpage content and save structured bookmarks.
-Always call the saveBookmark tool with an accurate title, a concise 2-sentence summary, exactly 3 relevant hashtags, and a primary category.
+Always call the saveBookmark tool with an accurate title, a concise 2-sentence summary, exactly 3 relevant hashtags based on the actual page content, and a primary category.
 `,
     tools: [saveBookmarkTool],
   });
@@ -108,24 +184,26 @@ Page Content Snippet: ${scrapedData.contentSnippet}
     }
 
     // Direct fallback if tool wasn't triggered
+    const inferred = inferMetadataFromContent(url, scrapedData.title, scrapedData.description);
     return await BookmarkModel.create({
       url,
       title: scrapedData.title,
-      summary: scrapedData.description || 'Saved link.',
-      tags: ['#general', '#link', '#read'],
-      category: 'general',
+      summary: inferred.summary,
+      tags: inferred.tags,
+      category: inferred.category,
       userNotes: userNotes || '',
       ogImage: scrapedData.ogImage,
       userId,
     });
   } catch (error) {
     console.error('Agent runner error, using fallback:', error);
+    const inferred = inferMetadataFromContent(url, scrapedData.title, scrapedData.description);
     return await BookmarkModel.create({
       url,
       title: scrapedData.title,
-      summary: scrapedData.description || 'Saved link.',
-      tags: ['#general', '#link', '#clipvault'],
-      category: 'general',
+      summary: inferred.summary,
+      tags: inferred.tags,
+      category: inferred.category,
       userNotes: userNotes || '',
       ogImage: scrapedData.ogImage,
       userId,
