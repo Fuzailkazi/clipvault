@@ -8,15 +8,15 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: 'dark',
+  theme: 'light',
   toggleTheme: () => {},
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem('clipvault_theme') as Theme | null;
-    if (stored) return stored;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const current = localStorage.getItem('clipvault_theme_v2') as Theme | null;
+    if (current === 'dark' || current === 'light') return current;
+    return 'light';
   });
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('clipvault_theme', theme);
+    localStorage.setItem('clipvault_theme_v2', theme);
   }, [theme]);
 
   const toggleTheme = () => {

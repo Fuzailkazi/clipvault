@@ -58,7 +58,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-modal-title"
-        className="relative w-full max-w-sm rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 overflow-hidden text-zinc-900 dark:text-zinc-100"
+        className="relative w-full max-w-sm bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/80 dark:border-white/10 rounded-3xl p-6 shadow-2xl text-slate-900 dark:text-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -66,20 +66,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           type="button"
           onClick={onClose}
           aria-label="Close dialog"
-          className="absolute right-3.5 top-3.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer p-1 rounded-md"
+          className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
 
         {/* Modal Header */}
         <div className="text-center mb-5">
-          <div className="h-9 w-9 mx-auto rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 flex items-center justify-center text-zinc-900 dark:text-zinc-100 mb-2 font-mono font-bold text-xs">
+          <div className="h-9 w-9 mx-auto rounded-xl bg-gradient-to-tr from-sky-400 to-indigo-500 flex items-center justify-center text-white mb-2 font-mono font-bold text-xs shadow-xs">
             CV
           </div>
-          <h2 id="auth-modal-title" className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+          <h2 id="auth-modal-title" className="text-base font-bold text-slate-900 dark:text-slate-100">
             {tab === 'signup' ? 'Create an account' : 'Welcome to ClipVault'}
           </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             {tab === 'signup'
               ? 'Save, summarize, and semantically search your links.'
               : 'Sign in to access your personal vault.'}
@@ -87,17 +87,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex rounded-lg bg-zinc-100 dark:bg-zinc-800/80 p-0.5 mb-4 text-xs font-medium border border-zinc-200 dark:border-zinc-700/50">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-full mb-6">
           <button
             type="button"
             onClick={() => {
               setTab('signin');
               setError(null);
             }}
-            className={`flex-1 py-1.5 rounded-md transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
               tab === 'signin'
-                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xs'
-                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
             Sign In
@@ -108,24 +108,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               setTab('signup');
               setError(null);
             }}
-            className={`flex-1 py-1.5 rounded-md transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
               tab === 'signup'
-                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xs'
-                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
-            Sign Up
+            Create Account
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-3.5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
-            <label htmlFor="auth-username" className="text-xs font-mono text-zinc-600 dark:text-zinc-400">
+            <label htmlFor="auth-username" className="text-xs font-medium text-slate-600 dark:text-slate-400">
               Username
             </label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
                 id="auth-username"
                 type="text"
@@ -133,17 +133,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="your username"
-                className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-zinc-400 dark:focus:border-zinc-500"
+                className="w-full pl-9 pr-3.5 py-2 rounded-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-sky-400 transition-colors"
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="auth-password" className="text-xs font-mono text-zinc-600 dark:text-zinc-400">
+            <label htmlFor="auth-password" className="text-xs font-medium text-slate-600 dark:text-slate-400">
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
                 id="auth-password"
                 type="password"
@@ -151,7 +151,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-zinc-400 dark:focus:border-zinc-500"
+                className="w-full pl-9 pr-3.5 py-2 rounded-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-sky-400 transition-colors"
               />
             </div>
           </div>
@@ -163,7 +163,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-2 rounded-lg font-medium text-xs sm:text-sm bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 border border-zinc-800 dark:border-zinc-200"
+            className="w-full py-2.5 rounded-full font-semibold text-xs sm:text-sm bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-xs"
           >
             {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             <span>{tab === 'signup' ? 'Create Account' : 'Sign In'}</span>

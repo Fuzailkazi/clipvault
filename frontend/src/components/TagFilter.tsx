@@ -17,58 +17,57 @@ export const TagFilter: React.FC<TagFilterProps> = ({
   onSearchChange,
 }) => {
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 space-y-3">
-      {/* Search Input & Active Filter Row */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 mb-5 space-y-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <input
             type="text"
-            aria-label="Search bookmarks"
+            aria-label="Filter title or summary"
             placeholder="Filter title or summary..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-9 pr-8 py-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition-colors shadow-xs"
+            className="w-full pl-9 pr-8 py-1.5 rounded-full bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/10 transition-all shadow-xs"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              aria-label="Clear search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3 w-3" />
             </button>
           )}
         </div>
 
         {selectedTag && (
-          <button
-            type="button"
-            onClick={() => onSelectTag(null)}
-            className="text-xs text-zinc-600 dark:text-zinc-400 font-mono hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center gap-1.5 cursor-pointer bg-zinc-100 dark:bg-zinc-900 px-2.5 py-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 transition-colors"
-          >
-            <span>Tag: #{selectedTag}</span>
-            <X className="h-3 w-3" />
-          </button>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 text-xs font-medium">
+            <span>Tag: {selectedTag}</span>
+            <button
+              type="button"
+              onClick={() => onSelectTag(null)}
+              className="p-0.5 hover:text-sky-950 rounded-full cursor-pointer"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Persistent Tag Filter Pills */}
       {tags.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          <div className="flex items-center text-[11px] font-mono text-zinc-400 gap-1 pr-1 shrink-0">
+          <div className="flex items-center text-[11px] font-medium text-slate-400 gap-1 pr-1 shrink-0">
             <Tag className="h-3 w-3" />
-            <span>Tags:</span>
+            <span>Pills:</span>
           </div>
 
           <button
             type="button"
             onClick={() => onSelectTag(null)}
-            className={`text-[11px] font-mono px-2.5 py-1 rounded-md whitespace-nowrap transition-colors cursor-pointer border ${
+            className={`text-xs px-3 py-1 rounded-full whitespace-nowrap transition-all cursor-pointer border ${
               selectedTag === null
-                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-medium'
-                : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-800'
+                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent font-medium shadow-xs'
+                : 'bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-50 border-slate-200/80 dark:border-white/10'
             }`}
           >
             All
@@ -81,10 +80,10 @@ export const TagFilter: React.FC<TagFilterProps> = ({
                 type="button"
                 key={tag}
                 onClick={() => onSelectTag(isSelected ? null : tag)}
-                className={`text-[11px] font-mono px-2.5 py-1 rounded-md whitespace-nowrap transition-colors cursor-pointer border ${
+                className={`text-xs px-3 py-1 rounded-full whitespace-nowrap transition-all cursor-pointer border ${
                   isSelected
-                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-medium'
-                    : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-800'
+                    ? 'bg-sky-500 text-white border-transparent font-semibold shadow-xs'
+                    : 'bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-50 border-slate-200/80 dark:border-white/10'
                 }`}
               >
                 {tag.startsWith('#') ? tag : `#${tag}`}
