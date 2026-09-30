@@ -49,7 +49,7 @@ export function App() {
   // Global ⌘K / Ctrl+K keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsCommandPaletteOpen((prev) => !prev);
       }
@@ -78,6 +78,7 @@ export function App() {
   useEffect(() => {
     const handleUnauthorized = () => {
       setBookmarks([]);
+      setMasterTags([]);
       setSelectedTag(null);
       setSearchQuery('');
       setIsAuthOpen(true);
@@ -126,6 +127,7 @@ export function App() {
     const loadBookmarks = async () => {
       if (!isAuthenticated) {
         setBookmarks([]);
+        setMasterTags([]);
         setIsLoading(false);
         return;
       }
@@ -184,6 +186,8 @@ export function App() {
     try {
       await api.deleteBookmark(id);
       setBookmarks((prev) => prev.filter((b) => b._id !== id));
+      setStarredIds((prev) => prev.filter((i) => i !== id));
+      localStorage.setItem('clipvault_starred_ids', JSON.stringify(starredIds.filter((i) => i !== id)));
     } catch (err) {
       console.error('Failed to delete bookmark:', err);
     }
