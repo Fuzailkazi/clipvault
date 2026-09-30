@@ -59,7 +59,12 @@ export const BookmarkListItem: React.FC<BookmarkListItemProps> = ({
         {onToggleStar && (
           <button
             type="button"
-            onClick={() => onToggleStar(bookmark._id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleStar(bookmark._id);
+            }}
+            title={isStarred ? 'Remove from Starred' : 'Add to Starred'}
+            aria-label="Star bookmark"
             className="p-1 rounded-full text-slate-400 hover:text-amber-500 transition-colors shrink-0 cursor-pointer"
           >
             <Star className={`h-4 w-4 ${isStarred ? 'fill-amber-400 text-amber-500' : ''}`} />
@@ -107,6 +112,8 @@ export const BookmarkListItem: React.FC<BookmarkListItemProps> = ({
         <button
           type="button"
           onClick={handleCopy}
+          title="Copy URL"
+          aria-label="Copy URL"
           className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
         >
           {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
@@ -116,6 +123,8 @@ export const BookmarkListItem: React.FC<BookmarkListItemProps> = ({
           type="button"
           onClick={handleDelete}
           disabled={isDeleting}
+          title="Delete bookmark"
+          aria-label="Delete bookmark"
           className="p-1.5 rounded-full text-slate-400 hover:text-rose-500 transition-colors disabled:opacity-50 cursor-pointer"
         >
           <Trash2 className="h-3.5 w-3.5" />

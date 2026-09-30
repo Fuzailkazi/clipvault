@@ -97,7 +97,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
 
   return (
     <div
-      className={`group relative rounded-2xl border p-4.5 transition-all duration-200 hover:-translate-y-1 hover:shadow-md flex flex-col justify-between h-full ${theme.card}`}
+      className={`group relative rounded-2xl border p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-md flex flex-col justify-between h-full ${theme.card}`}
     >
       <div>
         {/* Top Header: Favicon, Domain, Category & Star */}
@@ -203,6 +203,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
             type="button"
             onClick={handleCopy}
             title="Copy URL"
+            aria-label="Copy URL"
             className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
           >
             {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
@@ -213,6 +214,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
             onClick={handleDelete}
             disabled={isDeleting}
             title="Delete bookmark"
+            aria-label="Delete bookmark"
             className="p-1 rounded-full hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-950/60 dark:hover:text-rose-400 transition-colors cursor-pointer"
           >
             <Trash2 className="h-3.5 w-3.5" />
