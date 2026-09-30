@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Overhaul ClipVault's frontend into the StackNote digital notecard aesthetic (dreamy sky-blue cloud canvas, floating macOS window frame with mini-sidebar, deterministic mosaic pastel cards, and Day/Midnight dual-mode theming) while preserving all existing functionality.
+**Goal:** Overhaul ClipVault's frontend into the StackNote digital notecard aesthetic (dreamy sky-blue cloud canvas, floating macOS window frame with mini-sidebar, deterministic mosaic pastel cards, and Day/Midnight dual-mode theming) while preserving all existing functionality and power-user features (⌘K palette, offline detection, auth hygiene, auto-https prefixing).
 
 **Architecture:** A full-bleed responsive canvas with animated cloud blurs wraps a floating macOS window container. Inside, `Navbar.tsx` provides the top window toolbar with decorative traffic lights, `Sidebar.tsx` provides macro filtering (All, Starred, Tags, AI) with responsive desktop vertical / mobile horizontal layout, and `BookmarkFeed.tsx` renders an interactive dashed `[ ＋ Add Clip ]` card alongside digital notecards cycling through 4 signature pastel themes (`index % 4`). Starred state is maintained in `localStorage`.
 
@@ -88,9 +88,9 @@ git commit -m "feat(frontend): set light theme default and add dreamy cloud back
 - [ ] **Step 1: Update `Navbar.tsx` to macOS Window Toolbar**
 
 Transform `Navbar.tsx` to act as the integrated header toolbar for the floating window:
-- Left: Decorative macOS traffic light dots (🔴 `#ef4444`, 🟡 `#f59e0b`, 🟢 `#10b981`), followed by the rounded `ClipVault` monogram logo (`bg-sky-500 text-white rounded-xl`).
-- Center: Quick search pill button (`[ 🔍 Search clips... ⌘K ]`) with cloud-tinted hover state.
-- Right: Grid/List view switcher in rounded pill style, Day/Night toggle button with ☀️/🌙 icon, and user avatar / Login button.
+- Left: Decorative macOS traffic light dots (🔴 `#ff5f56`, 🟡 `#ffbd2e`, 🟢 `#27c93f`), followed by the rounded `ClipVault` monogram logo (`bg-gradient-to-tr from-sky-500 to-blue-600`).
+- Center: Quick search pill button (`[ 🔍 Search clips... ⌘K ]`).
+- Right: Grid/List view switcher in rounded pill style, Day/Night toggle button with ☀️/🌙 icon, and user avatar / Login button. Make `onOpenChat?: () => void` optional.
 
 ```tsx
 import React from 'react';
@@ -102,7 +102,7 @@ interface NavbarProps {
   bookmarkCount: number;
   isBackendOffline: boolean;
   onOpenAuth: () => void;
-  onOpenChat: () => void;
+  onOpenChat?: () => void;
   onOpenCommandPalette?: () => void;
   viewMode?: 'grid' | 'list';
   onToggleViewMode?: (mode: 'grid' | 'list') => void;
@@ -279,7 +279,7 @@ Implement the left navigation mini-sidebar matching StackNote:
 - Items:
   - `📁 All Clips` (shows total count)
   - `⭐ Starred` (shows starred count)
-  - `🏷️ Tags` (quick list of top 4 tags)
+  - `🏷️ Tags` (quick list of top 5 tags)
   - `✨ Ask AI` (triggers chat drawer)
 
 ```tsx
@@ -454,14 +454,15 @@ git commit -m "feat(frontend): create Sidebar component with responsive desktop 
 
 ---
 
-### Task 4: QuickPaste Input Ref & Styling (`QuickPaste.tsx`)
+### Task 4: QuickPaste Input Ref & Auto-HTTPS Prefixing (`QuickPaste.tsx`)
 
 **Files:**
-- Modify: `frontend/src/components/QuickPaste.tsx:1-90`
+- Modify: `frontend/src/components/QuickPaste.tsx:1-108`
 
-- [ ] **Step 1: Update `QuickPaste.tsx` with Ref Forwarding & Pill Styling**
+- [ ] **Step 1: Update `QuickPaste.tsx` with Auto-HTTPS Prefixing, Ref & Inline Errors**
 
-Update `QuickPaste.tsx` to accept `inputRef?: React.RefObject<HTMLInputElement | null>`, and style it as a clean pill input with an integrated dark `Clip` button:
+Keep `type="text"`, auto-prepend `https://` if missing, support `inputRef`, and retain inline error display:
+
 ```tsx
 import React, { useState } from 'react';
 import { Link2, Loader2, ArrowRight } from 'lucide-react';
@@ -476,17 +477,26 @@ export const QuickPaste: React.FC<QuickPasteProps> = ({ onSave, isLoading, input
   const [url, setUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim() || isLoading) return;
+    let target = url.trim();
+    if (!target || isLoading) return;
+
+    // Automatically prepend https:// if missing
+    if (!/^https?:\/\//i.test(target)) {
+      target = `https://${target}`;
+    }
+
     try {
-      await onSave(url.trim(), notes.trim() || undefined);
+      setError(null);
+      await onSave(target, notes.trim() || undefined);
       setUrl('');
       setNotes('');
       setShowNotes(false);
-    } catch {
-      // Handled by parent
+    } catch (err: any) {
+      setError(err.message || 'Failed to save bookmark');
     }
   };
 
@@ -497,7 +507,7 @@ export const QuickPaste: React.FC<QuickPasteProps> = ({ onSave, isLoading, input
           <Link2 className="h-4 w-4 text-sky-500 shrink-0 mr-2.5" />
           <input
             ref={inputRef}
-            type="url"
+            type="text"
             required
             placeholder="Paste URL to clip and summarize with AI..."
             value={url}
@@ -509,7 +519,7 @@ export const QuickPaste: React.FC<QuickPasteProps> = ({ onSave, isLoading, input
           <button
             type="button"
             onClick={() => setShowNotes(!showNotes)}
-            className="text-[11px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1 rounded-full transition-colors shrink-0"
+            className="text-[11px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1 rounded-full transition-colors shrink-0 cursor-pointer"
           >
             {showNotes ? 'Hide Note' : '+ Note'}
           </button>
@@ -541,6 +551,10 @@ export const QuickPaste: React.FC<QuickPasteProps> = ({ onSave, isLoading, input
             />
           </div>
         )}
+
+        {error && (
+          <p className="mt-1 px-4 text-xs text-rose-500 font-medium text-center">{error}</p>
+        )}
       </form>
     </div>
   );
@@ -556,7 +570,7 @@ Expected: Exit 0.
 
 ```bash
 git add frontend/src/components/QuickPaste.tsx
-git commit -m "feat(frontend): add inputRef support and pill styling to QuickPaste"
+git commit -m "feat(frontend): add inputRef support, auto-https prefixing, and pill styling to QuickPaste"
 ```
 
 ---
@@ -605,7 +619,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-full"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
             >
               <X className="h-3 w-3" />
             </button>
@@ -618,7 +632,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
             <button
               type="button"
               onClick={() => onSelectTag(null)}
-              className="p-0.5 hover:text-sky-950 rounded-full"
+              className="p-0.5 hover:text-sky-950 rounded-full cursor-pointer"
             >
               <X className="h-3 w-3" />
             </button>
@@ -687,28 +701,22 @@ git commit -m "feat(frontend): restyle TagFilter with pastel pill buttons and ro
 
 **Files:**
 - Modify: `frontend/src/components/BookmarkCard.tsx:1-192`
-- Modify: `frontend/src/components/BookmarkListItem.tsx:1-140`
+- Modify: `frontend/src/components/BookmarkListItem.tsx:1-162`
 
 - [ ] **Step 1: Update `BookmarkCard.tsx` with Mosaic Pastels & Star Toggle**
 
-Define the 4 deterministic pastel themes (`index % 4`):
-- `0`: Peach (`bg-[#fff8f3] border-[#fed7aa] text-amber-950 dark:bg-orange-950/20 dark:border-orange-500/30 dark:text-orange-100`)
-- `1`: Lilac (`bg-[#fbf7ff] border-[#e9d5ff] text-purple-950 dark:bg-purple-950/20 dark:border-purple-500/30 dark:text-purple-100`)
-- `2`: Sky Cyan (`bg-[#f0f9ff] border-[#bae6fd] text-sky-950 dark:bg-sky-950/20 dark:border-sky-500/30 dark:text-sky-100`)
-- `3`: Mint (`bg-[#f0fdf4] border-[#bbf7d0] text-emerald-950 dark:bg-emerald-950/20 dark:border-emerald-500/30 dark:text-emerald-100`)
-
-Include star toggle button in header, compact inset thumbnail for `ogImage`, and clean typography:
+Ensure all new props (`index = 0`, `isStarred = false`, `onToggleStar`) have defaults or are safely optional so existing callers compile without error:
 
 ```tsx
 import React, { useState } from 'react';
 import { ExternalLink, Copy, Check, Trash2, Calendar, Globe, Star } from 'lucide-react';
 import { Bookmark } from '../types';
 
-interface BookmarkCardProps {
+export interface BookmarkCardProps {
   bookmark: Bookmark;
-  index: number;
-  isStarred: boolean;
-  onToggleStar: (id: string) => void;
+  index?: number;
+  isStarred?: boolean;
+  onToggleStar?: (id: string) => void;
   onDelete: (id: string) => Promise<void>;
   onTagClick: (tag: string) => void;
 }
@@ -742,8 +750,8 @@ const PASTEL_THEMES = [
 
 export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   bookmark,
-  index,
-  isStarred,
+  index = 0,
+  isStarred = false,
   onToggleStar,
   onDelete,
   onTagClick,
@@ -823,22 +831,24 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleStar(bookmark._id);
-            }}
-            title={isStarred ? 'Remove from Starred' : 'Add to Starred'}
-            aria-label="Star bookmark"
-            className="p-1 rounded-full text-slate-400 hover:text-amber-500 transition-colors shrink-0 cursor-pointer"
-          >
-            <Star
-              className={`h-4 w-4 transition-transform active:scale-125 ${
-                isStarred ? 'fill-amber-400 text-amber-500' : 'hover:fill-amber-400/20'
-              }`}
-            />
-          </button>
+          {onToggleStar && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleStar(bookmark._id);
+              }}
+              title={isStarred ? 'Remove from Starred' : 'Add to Starred'}
+              aria-label="Star bookmark"
+              className="p-1 rounded-full text-slate-400 hover:text-amber-500 transition-colors shrink-0 cursor-pointer"
+            >
+              <Star
+                className={`h-4 w-4 transition-transform active:scale-125 ${
+                  isStarred ? 'fill-amber-400 text-amber-500' : 'hover:fill-amber-400/20'
+                }`}
+              />
+            </button>
+          )}
         </div>
 
         {/* Title & Inset Thumbnail */}
@@ -847,7 +857,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
             href={bookmark.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group/link flex-1 font-bold text-sm sm:text-base leading-snug hover:underline inline-flex items-baseline gap-1"
+            className="group/link flex-1 font-bold text-sm sm:text-base leading-snug hover:underline line-clamp-2 break-words inline-flex items-baseline gap-1"
           >
             <span>{bookmark.title}</span>
             <ExternalLink className="h-3 w-3 opacity-0 group-hover/link:opacity-100 transition-opacity shrink-0 translate-y-0.5" />
@@ -926,23 +936,23 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
 
 - [ ] **Step 2: Update `BookmarkListItem.tsx` with Star Toggle & Soft Styling**
 
-Update `BookmarkListItem.tsx` with `isStarred`, `onToggleStar`, and clean rounded styling:
+Update `BookmarkListItem.tsx` with optional `isStarred = false`, `onToggleStar`, and clean rounded styling:
 ```tsx
 import React, { useState } from 'react';
 import { ExternalLink, Copy, Check, Trash2, Globe, Star } from 'lucide-react';
 import { Bookmark } from '../types';
 
-interface BookmarkListItemProps {
+export interface BookmarkListItemProps {
   bookmark: Bookmark;
-  isStarred: boolean;
-  onToggleStar: (id: string) => void;
+  isStarred?: boolean;
+  onToggleStar?: (id: string) => void;
   onDelete: (id: string) => Promise<void>;
   onTagClick: (tag: string) => void;
 }
 
 export const BookmarkListItem: React.FC<BookmarkListItemProps> = ({
   bookmark,
-  isStarred,
+  isStarred = false,
   onToggleStar,
   onDelete,
   onTagClick,
@@ -986,13 +996,15 @@ export const BookmarkListItem: React.FC<BookmarkListItemProps> = ({
   return (
     <div className="group flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 hover:border-sky-300 dark:hover:border-sky-500/40 hover:shadow-xs transition-all">
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <button
-          type="button"
-          onClick={() => onToggleStar(bookmark._id)}
-          className="p-1 rounded-full text-slate-400 hover:text-amber-500 transition-colors shrink-0"
-        >
-          <Star className={`h-4 w-4 ${isStarred ? 'fill-amber-400 text-amber-500' : ''}`} />
-        </button>
+        {onToggleStar && (
+          <button
+            type="button"
+            onClick={() => onToggleStar(bookmark._id)}
+            className="p-1 rounded-full text-slate-400 hover:text-amber-500 transition-colors shrink-0 cursor-pointer"
+          >
+            <Star className={`h-4 w-4 ${isStarred ? 'fill-amber-400 text-amber-500' : ''}`} />
+          </button>
+        )}
 
         {!faviconError ? (
           <img
@@ -1025,7 +1037,7 @@ export const BookmarkListItem: React.FC<BookmarkListItemProps> = ({
               key={tag}
               type="button"
               onClick={() => onTagClick(tag)}
-              className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+              className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer"
             >
               {tag.startsWith('#') ? tag : `#${tag}`}
             </button>
@@ -1035,7 +1047,7 @@ export const BookmarkListItem: React.FC<BookmarkListItemProps> = ({
         <button
           type="button"
           onClick={handleCopy}
-          className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+          className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
         >
           {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
         </button>
@@ -1044,7 +1056,7 @@ export const BookmarkListItem: React.FC<BookmarkListItemProps> = ({
           type="button"
           onClick={handleDelete}
           disabled={isDeleting}
-          className="p-1.5 rounded-full text-slate-400 hover:text-rose-500 transition-colors disabled:opacity-50"
+          className="p-1.5 rounded-full text-slate-400 hover:text-rose-500 transition-colors disabled:opacity-50 cursor-pointer"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -1075,11 +1087,7 @@ git commit -m "feat(frontend): apply deterministic mosaic pastels, star toggle, 
 
 - [ ] **Step 1: Update `BookmarkFeed.tsx` with Dashed Add Card and Prop Flow**
 
-Update `BookmarkFeed.tsx` to:
-- Accept `starredIds: string[]`, `onToggleStar: (id: string) => void`, and `onAddClip: () => void`.
-- In Grid view, render the interactive dashed `[ ＋ Add Clip ]` card as the first item.
-- Pass `index={i}` to `BookmarkCard` so colors alternate predictably.
-- Style empty and offline states in friendly StackNote stationery style.
+Update `BookmarkFeed.tsx` to accept optional `starredIds = []`, `onToggleStar`, and `onAddClip` so the build stays green even before `App.tsx` is updated in Task 8:
 
 ```tsx
 import React from 'react';
@@ -1089,7 +1097,7 @@ import { Bookmark } from '../types';
 import { BookmarkCard } from './BookmarkCard';
 import { BookmarkListItem } from './BookmarkListItem';
 
-interface BookmarkFeedProps {
+export interface BookmarkFeedProps {
   bookmarks: Bookmark[];
   isLoading: boolean;
   isBackendOffline: boolean;
@@ -1098,9 +1106,9 @@ interface BookmarkFeedProps {
   onClearFilters?: () => void;
   hasFilters: boolean;
   viewMode?: 'grid' | 'list';
-  starredIds: string[];
-  onToggleStar: (id: string) => void;
-  onAddClip: () => void;
+  starredIds?: string[];
+  onToggleStar?: (id: string) => void;
+  onAddClip?: () => void;
 }
 
 export const BookmarkFeed: React.FC<BookmarkFeedProps> = ({
@@ -1112,7 +1120,7 @@ export const BookmarkFeed: React.FC<BookmarkFeedProps> = ({
   onClearFilters,
   hasFilters,
   viewMode = 'grid',
-  starredIds,
+  starredIds = [],
   onToggleStar,
   onAddClip,
 }) => {
@@ -1183,23 +1191,25 @@ export const BookmarkFeed: React.FC<BookmarkFeedProps> = ({
       {viewMode === 'grid' ? (
         <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4.5">
           {/* Dashed Add Clip Card (First item in grid view) */}
-          <motion.button
-            type="button"
-            onClick={onAddClip}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="rounded-2xl border-2 border-dashed border-sky-300 dark:border-sky-500/40 bg-white/60 dark:bg-slate-800/30 hover:bg-sky-50/50 dark:hover:bg-sky-950/20 p-6 flex flex-col items-center justify-center text-center min-h-[170px] transition-all cursor-pointer group"
-          >
-            <div className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-2">
-              <Plus className="h-5 w-5" />
-            </div>
-            <div className="text-xs font-bold text-sky-900 dark:text-sky-200">
-              Add New Clip
-            </div>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-              Click to paste link in quick-save bar
-            </p>
-          </motion.button>
+          {onAddClip && (
+            <motion.button
+              type="button"
+              onClick={onAddClip}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="rounded-2xl border-2 border-dashed border-sky-300 dark:border-sky-500/40 bg-white/60 dark:bg-slate-800/30 hover:bg-sky-50/50 dark:hover:bg-sky-950/20 p-6 flex flex-col items-center justify-center text-center min-h-[170px] transition-all cursor-pointer group"
+            >
+              <div className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-2">
+                <Plus className="h-5 w-5" />
+              </div>
+              <div className="text-xs font-bold text-sky-900 dark:text-sky-200">
+                Add New Clip
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                Click to paste link in quick-save bar
+              </p>
+            </motion.button>
+          )}
 
           <AnimatePresence>
             {bookmarks.map((bookmark, i) => (
@@ -1266,21 +1276,19 @@ git commit -m "feat(frontend): add dashed Add Clip card and pass mosaic index an
 
 ---
 
-### Task 8: App Orchestrator, Starred State, & Frosted Window Frame (`App.tsx`)
+### Task 8: App Orchestrator, Starred State, ⌘K Shortcut, & Health Checking (`App.tsx`)
 
 **Files:**
 - Modify: `frontend/src/App.tsx:1-226`
 
-- [ ] **Step 1: Update `App.tsx` with Window Layout, Starred State & Focus Ref**
+- [ ] **Step 1: Update `App.tsx` Preserving All Core Handlers and Power-User Features**
 
-Update `App.tsx`:
-- Centered floating window container (`rounded-[28px]`, `border border-white/80 dark:border-white/10`, `bg-white/95 dark:bg-slate-900/90`, `shadow-2xl shadow-sky-500/10`).
-- Manage `starredIds: string[]` in `localStorage` under `clipvault_starred_ids`.
-- Manage `activeFilter: 'all' | 'starred'`. Filter bookmarks accordingly.
-- Create `quickPasteRef = useRef<HTMLInputElement>(null)`.
-- Clicking dashed `[ ＋ Add Clip ]` card calls `quickPasteRef.current?.focus()`.
-- Two-column window body: Left `Sidebar.tsx`, Right main workspace (`QuickPaste`, `TagFilter`, `BookmarkFeed`).
-- In-window header: `"My Vault & Clips"` with subtitle and clean layout.
+Ensure:
+1. Global ⌘K / Ctrl+K keyboard shortcut listener is preserved.
+2. 15-second periodic backend health checking and offline error recovery is preserved.
+3. Clean logout handling with `clipvault:unauthorized` event listener and unauthenticated state reset is preserved.
+4. Starred state is maintained in `localStorage` under `clipvault_starred_ids`.
+5. Dashed add card smoothly scrolls to and focuses `quickPasteRef`.
 
 ```tsx
 import { useState, useEffect, useRef } from 'react';
@@ -1331,6 +1339,46 @@ export function App() {
 
   const quickPasteRef = useRef<HTMLInputElement | null>(null);
 
+  // Global ⌘K / Ctrl+K keyboard shortcut listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Periodic health check every 15 seconds
+  useEffect(() => {
+    let isMounted = true;
+    const checkServerHealth = async () => {
+      const isOnline = await api.checkHealth();
+      if (isMounted) setIsBackendOffline(!isOnline);
+    };
+
+    checkServerHealth();
+    const interval = setInterval(checkServerHealth, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Unauthorized session listener
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setBookmarks([]);
+      setSelectedTag(null);
+      setSearchQuery('');
+      setIsAuthOpen(true);
+    };
+    window.addEventListener('clipvault:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('clipvault:unauthorized', handleUnauthorized);
+  }, []);
+
   const handleToggleStar = (id: string) => {
     setStarredIds((prev) => {
       const updated = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
@@ -1369,6 +1417,12 @@ export function App() {
   useEffect(() => {
     let isCurrent = true;
     const loadBookmarks = async () => {
+      if (!isAuthenticated) {
+        setBookmarks([]);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         const res = await api.getBookmarks(
@@ -1387,6 +1441,7 @@ export function App() {
       } catch (err) {
         if (!isCurrent) return;
         console.error('Error fetching bookmarks:', err);
+        setIsBackendOffline(true);
       } finally {
         if (isCurrent) setIsLoading(false);
       }
@@ -1577,20 +1632,174 @@ git commit -m "feat(frontend): orchestrate App with floating macOS window, sideb
 - Modify: `frontend/src/components/CommandPalette.tsx`
 - Modify: `frontend/src/components/AuthModal.tsx`
 
-- [ ] **Step 1: Polish `ChatDrawer.tsx` with Frosted Pastel Glass**
+- [ ] **Step 1: Polish `ChatDrawer.tsx` with Frosted Glass & Pastel Bubbles**
 
-Ensure `ChatDrawer.tsx` uses frosted glass styling (`bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-l border-slate-200/80 dark:border-white/10`), rounded message bubbles, and soft lilac/sky assistant accent pills.
+Update `frontend/src/components/ChatDrawer.tsx`:
+- Drawer container: `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-l border-slate-200/80 dark:border-white/10 shadow-2xl`
+- Assistant message bubbles: soft lilac/sky styling (`bg-sky-50 dark:bg-slate-800/80 border border-sky-100 dark:border-white/5 text-slate-800 dark:text-slate-100 rounded-2xl rounded-tl-sm`)
+- User message bubbles: `bg-slate-900 text-white dark:bg-sky-500 dark:text-white rounded-2xl rounded-tr-sm`
+- Query chips: rounded pill tags with `hover:bg-sky-50 hover:border-sky-300 dark:hover:bg-slate-800`
 
-- [ ] **Step 2: Polish `CommandPalette.tsx` and `AuthModal.tsx`**
+In `frontend/src/components/ChatDrawer.tsx`:
+Update drawer container classes at lines 53-56:
+```tsx
+<motion.aside
+  initial={{ x: '100%' }}
+  animate={{ x: 0 }}
+  exit={{ x: '100%' }}
+  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+  className="relative w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full"
+>
+```
+Update header at lines 57-69 to:
+```tsx
+<div className="p-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-white/50 dark:bg-slate-900/50">
+  <div className="flex items-center gap-2">
+    <div className="h-7 w-7 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-xs">
+      <Sparkles className="h-3.5 w-3.5" />
+    </div>
+    <div>
+      <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+        AI Assistant
+      </h2>
+      <p className="text-[11px] text-slate-400">Gemini knowledge exploration</p>
+    </div>
+  </div>
+  <button
+    type="button"
+    onClick={onClose}
+    className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+  >
+    <X className="h-4 w-4" />
+  </button>
+</div>
+```
+Update message bubbles at lines 90-105:
+```tsx
+<div
+  className={`p-3 text-xs sm:text-sm leading-relaxed ${
+    msg.sender === 'user'
+      ? 'bg-slate-900 text-white dark:bg-sky-500 dark:text-white rounded-2xl rounded-tr-sm shadow-xs'
+      : 'bg-sky-50/80 dark:bg-slate-800/80 border border-sky-100 dark:border-white/5 text-slate-800 dark:text-slate-100 rounded-2xl rounded-tl-sm shadow-xs'
+  }`}
+>
+  <p className="whitespace-pre-wrap">{msg.text}</p>
+</div>
+```
+Update chat input form at lines 233-258:
+```tsx
+<form
+  onSubmit={(e) => {
+    e.preventDefault();
+    handleSend();
+  }}
+  className="p-3 border-t border-slate-200/80 dark:border-white/10 flex items-center gap-2 bg-white/70 dark:bg-slate-900/70"
+>
+  <input
+    type="text"
+    aria-label="Ask about your bookmarks"
+    placeholder="Ask about your bookmarks..."
+    value={input}
+    onChange={(e) => setInput(e.target.value)}
+    disabled={isLoading}
+    className="flex-1 px-3.5 py-2 rounded-full bg-slate-100/80 dark:bg-slate-800/80 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none border border-transparent focus:border-sky-400 transition-colors"
+  />
+  <button
+    type="submit"
+    aria-label="Send message"
+    disabled={isLoading || !input.trim()}
+    className="p-2 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer shadow-xs"
+  >
+    <Send className="h-3.5 w-3.5" />
+  </button>
+</form>
+```
 
-Ensure `CommandPalette.tsx` and `AuthModal.tsx` use `rounded-3xl border border-white/80 dark:border-white/10 shadow-2xl` matching the window aesthetic.
+- [ ] **Step 2: Polish `CommandPalette.tsx` with Frosted Glass**
 
-- [ ] **Step 3: Verify build**
+In `frontend/src/components/CommandPalette.tsx`:
+Update modal container at line 75:
+```tsx
+<div className="w-full max-w-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/80 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-100">
+```
+Update search input border and footer to match the slate/sky tokens:
+```tsx
+<div className="relative flex items-center px-4 py-3 border-b border-slate-200/80 dark:border-white/10">
+  <Search className="h-4 w-4 text-sky-500 mr-2.5 shrink-0" />
+  <input
+    ref={inputRef}
+    type="text"
+    placeholder="Type a command or search clips..."
+    value={query}
+    onChange={(e) => {
+      setQuery(e.target.value);
+      setSelectedIndex(0);
+    }}
+    className="w-full bg-transparent text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none"
+  />
+</div>
+```
+Update selected item background at lines 150-160:
+```tsx
+className={`px-3 py-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
+  isSelected
+    ? 'bg-sky-100/70 dark:bg-sky-950/50 text-sky-900 dark:text-sky-200'
+    : 'hover:bg-slate-100/60 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
+}`}
+```
+
+- [ ] **Step 3: Polish `AuthModal.tsx` with Rounded Glass Container**
+
+In `frontend/src/components/AuthModal.tsx`:
+Update modal dialog container at line 76:
+```tsx
+<div className="relative w-full max-w-sm bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/80 dark:border-white/10 rounded-3xl p-6 shadow-2xl">
+```
+Update tab buttons to rounded pill buttons:
+```tsx
+<div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-full mb-6">
+  <button
+    type="button"
+    onClick={() => setTab('signin')}
+    className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+      tab === 'signin'
+        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs'
+        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+    }`}
+  >
+    Sign In
+  </button>
+  <button
+    type="button"
+    onClick={() => setTab('signup')}
+    className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+      tab === 'signup'
+        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs'
+        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+    }`}
+  >
+    Create Account
+  </button>
+</div>
+```
+Update submit button to:
+```tsx
+<button
+  type="submit"
+  disabled={isLoading}
+  className="w-full py-2.5 rounded-full font-semibold text-xs sm:text-sm bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-xs"
+>
+  {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+  <span>{tab === 'signup' ? 'Create Account' : 'Sign In'}</span>
+</button>
+```
+
+- [ ] **Step 4: Verify build**
 
 Run: `npm run build --prefix frontend`  
 Expected: Exit 0.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add frontend/src/components/ChatDrawer.tsx frontend/src/components/CommandPalette.tsx frontend/src/components/AuthModal.tsx
@@ -1602,7 +1811,7 @@ git commit -m "feat(frontend): polish ChatDrawer, CommandPalette, and AuthModal 
 ### Task 10: End-to-End Build & Functional Verification
 
 **Files:**
-- Verify: Full frontend build and interaction flow
+- Full codebase verification
 
 - [ ] **Step 1: Execute full TypeScript and Vite build**
 
@@ -1612,11 +1821,12 @@ Expected: Exit 0 with bundle generation and 0 errors.
 - [ ] **Step 2: Verify Theme, Layout & Card Color Alternation**
 
 Verify:
-- Day mode displays sky-blue gradient with soft ambient clouds.
+- Day mode displays sky-blue gradient with soft ambient clouds by default.
 - Window container renders macOS red/amber/green controls and left mini-sidebar.
 - Cards cycle smoothly through Peach, Lilac, Sky Cyan, and Mint.
 - Clicking the dashed `[ ＋ Add Clip ]` card focuses the QuickPaste input.
 - Star toggle button works and persists in localStorage.
+- ⌘K opens Command Palette.
 - Dark mode toggle transitions to midnight cosmic theme.
 
 - [ ] **Step 3: Commit final verification**
