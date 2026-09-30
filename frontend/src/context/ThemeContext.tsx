@@ -14,8 +14,8 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem('clipvault_theme') as Theme | null;
-    if (stored) return stored;
+    const current = localStorage.getItem('clipvault_theme_v2') as Theme | null;
+    if (current === 'dark' || current === 'light') return current;
     return 'light';
   });
 
@@ -26,7 +26,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('clipvault_theme', theme);
+    localStorage.setItem('clipvault_theme_v2', theme);
   }, [theme]);
 
   const toggleTheme = () => {
