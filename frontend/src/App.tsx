@@ -186,8 +186,15 @@ export function App() {
     try {
       await api.deleteBookmark(id);
       setBookmarks((prev) => prev.filter((b) => b._id !== id));
-      setStarredIds((prev) => prev.filter((i) => i !== id));
-      localStorage.setItem('clipvault_starred_ids', JSON.stringify(starredIds.filter((i) => i !== id)));
+      setStarredIds((prev) => {
+        const updated = prev.filter((i) => i !== id);
+        try {
+          localStorage.setItem('clipvault_starred_ids', JSON.stringify(updated));
+        } catch {
+          // Ignore
+        }
+        return updated;
+      });
     } catch (err) {
       console.error('Failed to delete bookmark:', err);
     }
